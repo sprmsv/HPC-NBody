@@ -24,13 +24,25 @@ void dummy_call()
 	cudaFree(dummy_arr);
 }
 
+/*
+Min and max functions
+*/
+double max(double x, double y)
+{
+	return ((x) > (y) ? (x) : (y));
+}
+
+double min(double x, double y)
+{
+	return ((x) < (y) ? (x) : (y));
+}
 
 /*
 Implementation of a simple N-Body code in brute force.
 The parallelization target is CUDA
-Input format is 
+Input format is
 */
-void nbodybruteforce (particle_t * array, int nbr_particles, int nbr_iterations) {
+void nbodybruteforce(particle_t * array, int nbr_particles, int nbr_iterations) {
 
 	dummy_call();
 

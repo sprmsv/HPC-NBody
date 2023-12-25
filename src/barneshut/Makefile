@@ -1,15 +1,14 @@
-CC=gcc
-LD=${CC}
-DEBUG=-g
-CFLAGS+=-Wall -Wextra -pedantic -O3  $(DEBUG)
-LDFLAGS+=-lm -lm $(DEBUG)
+CXX=g++
+LD=${CXX}
+CXXFLAGS+=-Wall -Wextra -pedantic -O3
+LDFLAGS+=-lm -lm
 
 OBJS_NBODY=nbody.o reader.o nbody_barneshut.o
 
-all: nbody-code
+all: nbody
 
-nbody-code: $(OBJS_NBODY)
+nbody: $(OBJS_NBODY)
 	$(LD) $(OBJS_NBODY) $(LDFLAGS) -o $@
 
 clean:
-	rm -Rf nbody-code *.o *~  gmon.out
+	rm -Rf nbody *.o *~  gmon.out

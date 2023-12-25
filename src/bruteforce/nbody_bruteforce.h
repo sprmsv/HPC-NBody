@@ -4,13 +4,12 @@
 #include <stdio.h>
 #include "parameters.h"
 
-#define max(a,b) ((a) > (b) ? (a) : (b))
-#define min(a,b) ((a) < (b) ? (a) : (b))
-
 
 void nbodybruteforce (particle_t* array, int nbr_particles, int nbr_iterations);
 void compute_brute_force(particle_t* p1, particle_t* array, int nbr_particles, double step);
 void update_positions(particle_t* array, int nbr_particles, double step);
+double max(double x, double y);
+double min(double x, double y);
 
 
 #endif /*NBODYBRUTEFORCE_H_*/
