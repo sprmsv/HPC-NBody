@@ -1,8 +1,9 @@
-CXX = g++
+CXX = icpc
 CXXFLAGS += -Wall -Wextra -pedantic -std=c++11 -O3
 NVCC = nvcc
 NVCCFLAGS += -O3
 LD = ${CXX}
+LDFLAGS = ${CXXFLAGS}
 LDFLAGS += -lm
 # LDFLAGS += $(NVCCFLAGS)
 
@@ -12,6 +13,9 @@ all: build remove_objs
 
 build: $(OBJS)
 	$(LD) $(OBJS) $(LDFLAGS) -o nbody
+
+profiling: $(OBJS)
+	$(LD) $(OBJS) $(LDFLAGS) -pg -g -o nbody
 
 # nbody-code: nbody.o nbody_bruteforce.o reader.o
 # 	$(NVCC) $^ $(LDFLAGS) -o $@

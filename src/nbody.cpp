@@ -1,4 +1,5 @@
 // (c) 2020, Vincent Keller (Vincent.Keller@epfl.ch)
+// (c) 2023, Sepehr Mousavi (sepehr.mousavi@epfl.ch)
 
 #include "parameters.h"
 #include "barneshut.h"
@@ -9,12 +10,12 @@
 #include <iostream>
 #include <iomanip>
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstring>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
-
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef std::chrono::high_resolution_clock clk;
 typedef std::chrono::duration<double> second;

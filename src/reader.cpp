@@ -48,7 +48,7 @@ particle_t* read_test_case(const char* fn)
 		mat[i].m = m;
 		mat[i].id = id;
 		mat[i].V = V;
-		mat[i].node = NULL;
+		mat[i].parent = NULL;
 		mat[i].fx = 0.;
 		mat[i].fy = 0.;
 		mat[i].fz = 0.;

@@ -45,11 +45,11 @@ struct particles
 	// Identifier
 	int id;
 
-	// ?
+	// Potential
 	double V;
 
 	// Parent node
-	node* node;
+	node* parent;
 };
 
 struct nodes

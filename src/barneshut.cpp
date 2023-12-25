@@ -207,7 +207,7 @@ void insert_particle(particle_t* p, node* n)
 		n->centerz = p->z;
 		n->mass = p->m;
 		n->sub_nbr_particles++;
-		p->node = n;
+		p->parent = n;
 	}
 
 	// There is already a particle
@@ -236,7 +236,7 @@ void insert_particle(particle_t* p, node* n)
 		n->centery = totaly / totalmass;
 		n->centerz = totalz / totalmass;
 		n->sub_nbr_particles++;
-		p->node = n;
+		p->parent = n;
 	}
 }
 
