@@ -24,7 +24,7 @@
 typedef struct particles particle_t ;
 typedef struct nodes node;
 
-struct particles{
+struct particles {
 	double x;
 	double y;
 	double z;
@@ -37,13 +37,11 @@ struct particles{
 	double m;
 	int id;
 	double V;
-	node * node;
+	node* node;
 };
 
-
-
-struct nodes{
-	particle_t * particle;
+struct nodes {
+	particle_t* particle;
 	int sub_nbr_particles;
 	int depth;
 
@@ -58,8 +56,8 @@ struct nodes{
 	double centerx;
 	double centery;
 	double centerz;
-	node * parent;
-	node * children;
+	node* parent;
+	node* children;
 };
 
 #endif /*PARAMETERS_H_*/

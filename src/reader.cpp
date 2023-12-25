@@ -1,6 +1,5 @@
 #include "reader.h"
 
-
 /*
 Reads an XYZ file containing the particles and their masses.
 Use : https://github.com/martinsparre/Gadget2Conversion to read an IC's file example from Gadget 2
@@ -18,20 +17,16 @@ where :
 	V		: potential (not used in this simulation)
 */
 
-
-particle_t * read_test_case(const char * restrict fn)
+particle_t* read_test_case(const char* restrict fn)
 {
-	particle_t * mat;
-
+	particle_t* mat;
 	int nbr_particles = 0;
-	float x,y,z,vx,vy,vz,m,V;
+	float x, y, z, vx, vy, vz, m, V;
 	int id;
 	int i;
 
 	FILE *f;
-
-	
-	if ((f = fopen(fn, "r")) == NULL) 
+	if ((f = fopen(fn, "r")) == NULL)
 	{
 		printf("Could not open file");
 		exit(1);
@@ -39,12 +34,7 @@ particle_t * read_test_case(const char * restrict fn)
 	rewind(f);
 	fscanf(f, "%d", &nbr_particles);
 	printf("Reading file ... ");
-	mat = malloc(nbr_particles*sizeof(particle_t));
-
-/*
-File format : 
-Line 2 -> N	: x : y : z : vx : vy : vz : m : ID : V
-*/
+	mat = malloc(nbr_particles * sizeof(particle_t));
 
 	for (i = 0; i<nbr_particles; i++){
 		fscanf(f, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f", &x, &y, &z, &vx, &vy, &vz, &m, &id, &V);
@@ -59,43 +49,36 @@ Line 2 -> N	: x : y : z : vx : vy : vz : m : ID : V
 		mat[i].id = id;
 		mat[i].V = V;
 		mat[i].node = NULL;
-//		printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f", &x, &y, &z, &vx, &vy, &vz, &m, &id, &V);
 		mat[i].fx = 0.;
 		mat[i].fy = 0.;
 		mat[i].fz = 0.;
 	}
 		printf("OK\n");
 
-
-
 	if (f !=stdin) fclose(f);
-
 
 	return mat;
 }
 
-
-int get_nbr_particles(const char * restrict fn)
+int get_nbr_particles(const char* restrict fn)
 {
-
 	int nbr_part = 0;
+	FILE* f;
 
-	FILE *f;
-
-	
-	if ((f = fopen(fn, "r")) == NULL) 
+	if ((f = fopen(fn, "r")) == NULL)
 	{
 		printf("Could not open file");
 		exit(1);
 	}
 	fscanf(f, "%d", &nbr_part);
 
-	if (f !=stdin) fclose(f);
+	if (f != stdin) fclose(f);
 
 	return nbr_part;
 }
 
-particle_t getMinMax (particle_t * array, int nbr_particles) {
+particle_t getMinMax (particle_t* array, int nbr_particles)
+{
 	int i;
 	double minx = DBL_MAX;
 	double maxx = DBL_MIN;
@@ -105,31 +88,28 @@ particle_t getMinMax (particle_t * array, int nbr_particles) {
 	double maxz = DBL_MIN;
 	double maxt, mint;
 	particle_t tmp;
-	
+
 	for (i = 0; i<nbr_particles; i++){
 		if (array[i].x < minx) minx = array[i].x;
 		if (array[i].x > maxx) maxx = array[i].x;
 		if (array[i].y < miny) miny = array[i].y;
 		if (array[i].y > maxy) maxy = array[i].y;
 		if (array[i].z < minz) minz = array[i].z;
-		if (array[i].z > maxz) maxz = array[i].z;	
+		if (array[i].z > maxz) maxz = array[i].z;
 	}
 
-	maxt = max(maxx,maxy);
-	maxt = max(maxt,maxz);
-	mint = min(minx,miny);
-	mint = min(mint,minz);
+	maxt = max(maxx, maxy);
+	maxt = max(maxt, maxz);
+	mint = min(minx, miny);
+	mint = min(mint, minz);
 
-	tmp.x = mint*SIZEOFSPACE;
-	tmp.vx = maxt*SIZEOFSPACE;
-	tmp.y = mint*SIZEOFSPACE;
-	tmp.vy = maxt*SIZEOFSPACE;
-	tmp.z = mint*SIZEOFSPACE;
-	tmp.vz = maxt*SIZEOFSPACE;
+	tmp.x = mint * SIZEOFSPACE;
+	tmp.vx = maxt * SIZEOFSPACE;
+	tmp.y = mint * SIZEOFSPACE;
+	tmp.vy = maxt * SIZEOFSPACE;
+	tmp.z = mint * SIZEOFSPACE;
+	tmp.vz = maxt * SIZEOFSPACE;
 
 	return tmp;
 
 }
-
-
-

@@ -35,3 +35,5 @@
 *.pdf
 .DS_Store
 TODO.md
+.vscode/*
+cuda/

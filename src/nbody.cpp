@@ -1,5 +1,5 @@
-#include <stdio.h> 
-#include <stdlib.h> 
+#include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -9,7 +9,8 @@
 #include "reader.h"
 #include <sys/time.h>
 
-void print_parameters(){
+void print_parameters()
+{
 	printf("====================================================\n");
 	printf("N-Body 3D simulation code for MATH-454 course EPFL  \n");
 	printf("Parameters for the Barnes-Hut algorithm:\n");
@@ -29,13 +30,11 @@ void print_parameters(){
 
 double second()
 {
-        struct timeval tp;
-        struct timezone tzp;
+	struct timeval tp;
+	struct timezone tzp;
 	gettimeofday(&tp,&tzp);
-        return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
+	return ( (double) tp.tv_sec + (double) tp.tv_usec * 1.e-6 );
 }
-
-
 
 /*
 Implementation of a 3D N-Body code in C
@@ -45,9 +44,9 @@ It is possible to download the Gadget2 test cases to test your code
 Code largely inspired by http://www-inf.telecom-sudparis.eu/COURS/CSC5001/new_site/Supports/Projet/NBody/sujet.php
 
 */
-int main ( int argc, char **argv ) {
-
-	particle_t * array;
+int main(int argc, char **argv)
+{
+	particle_t* array;
 	int nbr_iterations;
 	int nbr_particles;
 	double t1, t2;
@@ -61,8 +60,8 @@ int main ( int argc, char **argv ) {
 		fprintf(stderr, "Usage: %s [martix-market-filename]\n", argv[0]);
 		exit(1);
 	}
-	else    
-	{ 
+	else
+	{
 		printf("Read data from file \n");
 		nbr_particles = get_nbr_particles(argv[1]);
 		array = read_test_case(argv[1]);
@@ -73,17 +72,16 @@ int main ( int argc, char **argv ) {
 	t1 = second();
 	nbodybruteforce(array, nbr_particles, nbr_iterations);
 	t2 = second();
-	printf("N-Body brute force for %d particles : %f [s] \n",nbr_iterations, (t2-t1));
-	
+	printf("N-Body brute force for %d particles : %f [s] \n", nbr_iterations, (t2-t1));
+
 	printf("BARNES-HUT simulation starting \n");
+	array = read_test_case(argv[1]);
 	t1 = second();
 	nbodybarneshut(array, nbr_particles, nbr_iterations);
 	t2 = second();
-	printf("N-Body barnes-hut for %d particles : %f [s] \n",nbr_particles, (t2-t1));
+	printf("N-Body barnes-hut for %d particles : %f [s] \n", nbr_particles, (t2-t1));
 	free(array);
 
 	printf("Simulation finished \n");
 	return 0;
 }
-
-
