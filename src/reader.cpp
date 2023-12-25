@@ -17,26 +17,26 @@ where :
 	V		: potential (not used in this simulation)
 */
 
-particle_t* read_test_case(const char* restrict fn)
+particle_t* read_test_case(const char* fn)
 {
 	particle_t* mat;
 	int nbr_particles = 0;
 	float x, y, z, vx, vy, vz, m, V;
 	int id;
 	int i;
+	FILE* f;
 
-	FILE *f;
 	if ((f = fopen(fn, "r")) == NULL)
 	{
-		printf("Could not open file");
+		std::cerr << "Could not open file" << std::endl;
 		exit(1);
 	}
 	rewind(f);
 	fscanf(f, "%d", &nbr_particles);
-	printf("Reading file ... ");
-	mat = malloc(nbr_particles * sizeof(particle_t));
+	mat = (particle_t*) malloc(nbr_particles * sizeof(particle_t));
 
-	for (i = 0; i<nbr_particles; i++){
+	for (i = 0; i < nbr_particles; i++)
+	{
 		fscanf(f, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f", &x, &y, &z, &vx, &vy, &vz, &m, &id, &V);
 		mat[i].x = x;
 		mat[i].y = y;
@@ -53,21 +53,20 @@ particle_t* read_test_case(const char* restrict fn)
 		mat[i].fy = 0.;
 		mat[i].fz = 0.;
 	}
-		printf("OK\n");
 
 	if (f !=stdin) fclose(f);
 
 	return mat;
 }
 
-int get_nbr_particles(const char* restrict fn)
+int get_nbr_particles(const char* fn)
 {
 	int nbr_part = 0;
 	FILE* f;
 
 	if ((f = fopen(fn, "r")) == NULL)
 	{
-		printf("Could not open file");
+		std::cerr << "Could not open file" << std::endl;
 		exit(1);
 	}
 	fscanf(f, "%d", &nbr_part);
@@ -77,7 +76,7 @@ int get_nbr_particles(const char* restrict fn)
 	return nbr_part;
 }
 
-particle_t getMinMax (particle_t* array, int nbr_particles)
+particle_t getMinMax(particle_t* array, int nbr_particles)
 {
 	int i;
 	double minx = DBL_MAX;
@@ -87,9 +86,10 @@ particle_t getMinMax (particle_t* array, int nbr_particles)
 	double minz = DBL_MAX;
 	double maxz = DBL_MIN;
 	double maxt, mint;
-	particle_t tmp;
+	particle_t particle_minmax;
 
-	for (i = 0; i<nbr_particles; i++){
+	for (i = 0; i < nbr_particles; i++)
+	{
 		if (array[i].x < minx) minx = array[i].x;
 		if (array[i].x > maxx) maxx = array[i].x;
 		if (array[i].y < miny) miny = array[i].y;
@@ -98,18 +98,17 @@ particle_t getMinMax (particle_t* array, int nbr_particles)
 		if (array[i].z > maxz) maxz = array[i].z;
 	}
 
-	maxt = max(maxx, maxy);
-	maxt = max(maxt, maxz);
-	mint = min(minx, miny);
-	mint = min(mint, minz);
+	maxt = std::max(maxx, maxy);
+	maxt = std::max(maxt, maxz);
+	mint = std::min(minx, miny);
+	mint = std::min(mint, minz);
 
-	tmp.x = mint * SIZEOFSPACE;
-	tmp.vx = maxt * SIZEOFSPACE;
-	tmp.y = mint * SIZEOFSPACE;
-	tmp.vy = maxt * SIZEOFSPACE;
-	tmp.z = mint * SIZEOFSPACE;
-	tmp.vz = maxt * SIZEOFSPACE;
+	particle_minmax.x = mint * SIZEOFSPACE;
+	particle_minmax.vx = maxt * SIZEOFSPACE;
+	particle_minmax.y = mint * SIZEOFSPACE;
+	particle_minmax.vy = maxt * SIZEOFSPACE;
+	particle_minmax.z = mint * SIZEOFSPACE;
+	particle_minmax.vz = maxt * SIZEOFSPACE;
 
-	return tmp;
-
+	return particle_minmax;
 }

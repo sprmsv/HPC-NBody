@@ -1,6 +1,5 @@
-#include "nbody_bruteforce.h"
+#include "bruteforce.h"
 
-#include <math.h>
 #include <cuda_runtime.h>
 
 __global__ void hello(double * dummy_arr)
@@ -24,18 +23,6 @@ void dummy_call()
 	cudaFree(dummy_arr);
 }
 
-/*
-Min and max functions
-*/
-double max(double x, double y)
-{
-	return ((x) > (y) ? (x) : (y));
-}
-
-double min(double x, double y)
-{
-	return ((x) < (y) ? (x) : (y));
-}
 
 /*
 Implementation of a simple N-Body code in brute force.
@@ -49,7 +36,6 @@ void nbodybruteforce(particle_t * array, int nbr_particles, int nbr_iterations) 
 	int i,n;
 	double step = 1.;
 	for (n = 0 ; n  < nbr_iterations ; n++){
-		printf("ITERATION %d \n",n);
 		for (i = 0 ; i  < nbr_particles ; i++){
 			compute_brute_force(&array[i], array, nbr_particles,step);
 		}
@@ -79,7 +65,7 @@ void compute_brute_force(particle_t * p1, particle_t * array, int nbr_particles,
 			x_sep = tmp.x - p1->x;
 			y_sep = tmp.y - p1->y;
 			z_sep = tmp.z - p1->z;
-			dist_sq = max((x_sep*x_sep) + (y_sep*y_sep) + (z_sep*z_sep), 0.01);
+			dist_sq = std::max((x_sep*x_sep) + (y_sep*y_sep) + (z_sep*z_sep), 0.01);
 			grav_base = GRAV_CONSTANT*(p1->m)*(tmp.m)/dist_sq / sqrt(dist_sq);
 			F_x += grav_base*x_sep;
 			F_y += grav_base*y_sep;
