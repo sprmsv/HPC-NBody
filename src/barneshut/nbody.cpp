@@ -1,13 +1,14 @@
+#include "parameters.h"
+#include "nbody_barneshut.h"
+#include "reader.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include "parameters.h"
-#include "nbody_bruteforce.h"
-#include "nbody_barneshut.h"
-#include "reader.h"
 #include <sys/time.h>
+
 
 void print_parameters()
 {
@@ -67,12 +68,6 @@ int main(int argc, char **argv)
 		array = read_test_case(argv[1]);
 		printf("Number of particles : %d\n",nbr_particles);
 	}
-
-	printf("BRUTE FORCE simulation starting \n");
-	t1 = second();
-	nbodybruteforce(array, nbr_particles, nbr_iterations);
-	t2 = second();
-	printf("N-Body brute force for %d particles : %f [s] \n", nbr_iterations, (t2-t1));
 
 	printf("BARNES-HUT simulation starting \n");
 	array = read_test_case(argv[1]);
