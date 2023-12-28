@@ -23,7 +23,7 @@ typedef std::chrono::duration<double> second;
 
 void print_usage(char* name)
 {
-	std::cerr << "Usage: " << name << "<input-filename> [-bh OR -bf]" << std::endl;
+	std::cerr << "Usage: " << name << "<input-filename> <iterations> [-bh OR -bf]" << std::endl;
 	exit(1);
 }
 
@@ -31,17 +31,18 @@ int main(int argc, char** argv)
 {
 	particle_t* array;
 	int nbr_particles;
+	int nbr_iterations;
 	bool BARNESHUT = false;
 
 	// Read method
-	if (argc == 2) {
+	if (argc == 3) {
 		BARNESHUT = false;
 	}
-	else if (argc == 3) {
-		if (!strcmp(argv[2], "-bh")) {
+	else if (argc == 4) {
+		if (!strcmp(argv[3], "-bh")) {
 			BARNESHUT = true;
 		}
-		else if (!strcmp(argv[2], "-bf")) {
+		else if (!strcmp(argv[3], "-bf")) {
 			BARNESHUT = false;
 		}
 		else {
@@ -55,14 +56,15 @@ int main(int argc, char** argv)
 	// Read input file
 	nbr_particles = get_nbr_particles(argv[1]);
 	array = read_test_case(argv[1]);
+	nbr_iterations = std::stoi(argv[2]);
 
 	// Run the simulation
 	auto start = clk::now();
 	if (BARNESHUT) {
-		nbodybarneshut(array, nbr_particles, NBRITERATIONS);
+		nbodybarneshut(array, nbr_particles, nbr_iterations);
 	}
 	else {
-		nbodybruteforce(array, nbr_particles, NBRITERATIONS);
+		nbodybruteforce(array, nbr_particles, nbr_iterations);
 	}
 	second time = clk::now() - start;
 
@@ -73,7 +75,7 @@ int main(int argc, char** argv)
 	std::cout << argv[1] << ": "
 			<< "BH " << BARNESHUT << "\t"
 			<< "N " << nbr_particles << "\t"
-			<< "ITERS " << NBRITERATIONS << "\t"
+			<< "ITERS " << nbr_iterations << "\t"
 			<< "DT " << TIMESTEP << "\t"
 			<< "SIZE " << SIZEOFSPACE << "\t"
 			<< "THETA " << THETA << "\t"

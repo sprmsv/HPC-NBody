@@ -1,6 +1,6 @@
 #include "barneshut.h"
 
-#define DEBUG
+// #define DEBUG
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 {
@@ -42,7 +42,6 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 	free(root);
 	free(newroot);
 }
-
 
 // Init the tree
 // Remark: We use a particle struct to transfer min and max values from main

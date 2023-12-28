@@ -2,6 +2,8 @@
 
 0. Profiling + sequential fraction + Amdhal’s and Gustafson’s laws
 
+*. PROBLEM: Segmentation fault when iterations are increased
+
 0. Review the lecture slides
 
 1. A parallel version of the Barnes-Hut algorithm using MPI.

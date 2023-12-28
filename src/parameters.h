@@ -7,7 +7,6 @@
 #define THETA 1.0
 #define TIMESTEP 1.
 #define SIZEOFSPACE 10.0  // Expansion ratio
-#define NBRITERATIONS 4
 
 #define SW_DOWN 0
 #define SE_DOWN 1
