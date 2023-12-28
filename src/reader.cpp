@@ -28,7 +28,7 @@ particle_t* read_test_case(const char* fn)
 
 	if ((f = fopen(fn, "r")) == NULL)
 	{
-		std::cerr << "Could not open file" << std::endl;
+		std::cerr << "ERROR: Could not open file" << std::endl;
 		exit(1);
 	}
 	rewind(f);
@@ -66,7 +66,7 @@ int get_nbr_particles(const char* fn)
 
 	if ((f = fopen(fn, "r")) == NULL)
 	{
-		std::cerr << "Could not open file" << std::endl;
+		std::cerr << "ERROR: Could not open file" << std::endl;
 		exit(1);
 	}
 	fscanf(f, "%d", &nbr_part);

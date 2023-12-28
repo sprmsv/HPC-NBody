@@ -36,5 +36,11 @@
 .DS_Store
 .vscode/*
 *.o
-*.sh
 src/nbody
+perf.data
+gmon.out
+
+# Scripts
+scripts/*.sh
+!scripts/profiling.sh
+!scripts/job-profiling.sh
