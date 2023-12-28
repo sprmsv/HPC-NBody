@@ -17,9 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 typedef std::chrono::high_resolution_clock clk;
 typedef std::chrono::duration<double> second;
-
 
 void print_usage(char* name)
 {

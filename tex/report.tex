@@ -47,6 +47,28 @@
 \section{Implementations}
 ...
 
+\subsection{SEQ}
+- Only code cleaning + changing input arguments
+- Base for the other parts
+
+\subsection{MPI}
+- nbody.cpp
+  - ::main: MPI initialization and finalization
+- barneshut.h
+  - ::barneshut(, psize, prank)
+- paramteters.h
+  - ::particle.prank
+- reader.h and reader.cpp
+  - ::read_test_case(, psize)
+  - particle.prank = (id - 1) \% psize
+- barneshut.cpp
+  - compute_force_in_node(, int prank)
+    - Only compute force if particle.prank matches
+  - move_all_particles(, int prank)
+  - move_particle(, int prank)
+    - If particle.prank matches, send the calculations to all the other processes
+    - Otherwise, receive the calculations from the corresponding process
+
 \section{Results}
 ...
 

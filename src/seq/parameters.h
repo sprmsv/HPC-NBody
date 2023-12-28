@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+// #define DEBUG
+
 #define GRAV_CONSTANT 0.5
 #define THETA 1.0
 #define TIMESTEP 1.

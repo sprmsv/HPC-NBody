@@ -1,8 +1,7 @@
 #include "barneshut.h"
 
-// #define DEBUG
 
-void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
+void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, int psize, int prank)
 {
 	// Declare variables
 	double step = TIMESTEP;
@@ -23,9 +22,9 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 
 	// Take time steps and move the particles
 	for (int it = 0; it < nbr_iterations; ++it) {
-		compute_force_in_node(root, root);
-		compute_bh_force(root);  // NOTE: Calling this function is not necessary
-		move_all_particles(newroot, root, step);
+		compute_force_in_node(root, root, prank);
+		// compute_bh_force(root);  // TODO: Update if necessary
+		move_all_particles(newroot, root, step, psize, prank);
 		// Swap the root pointers
 		oldroot = root;
 		root = newroot;
@@ -34,7 +33,7 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 	}
 
 #ifdef DEBUG
-	print_tree(root);
+	if (prank == 0) print_tree(root);
 #endif
 
 	// Deallocate memory
@@ -240,36 +239,61 @@ int get_octrant(particle_t* p, node* n)
 }
 
 // Update position/velocity of all the particles of node n and store them to a new root
-void move_all_particles(node* newroot, node* n, double step)
+void move_all_particles(node* newroot, node* n, double step, int psize, int prank)
 {
 	if (n->children != NULL) {
 		for (int i = 0; i < 8; i++){
-			move_all_particles(newroot, &n->children[i], step);
+			move_all_particles(newroot, &n->children[i], step, psize, prank);
 		}
 	}
 	else {
-		particle_t* p = n->particle;
-		move_particle(newroot, n, p, step);
+		move_particle(newroot, n, n->particle, step, psize, prank);
 	}
 }
 
 // Compute position/velocity of the particle and store it in a new root
-void move_particle(node* newroot, node* n, particle_t* p, double step)
+void move_particle(node* newroot, node* n, particle_t* p, double step, int psize, int prank)
 {
 	double ax, ay, az;
+	MPI_Request req_send;
+	MPI_Request req_recv;
 
 	if ((p==NULL) || (n==NULL))
 		return;
 
-	ax = p->fx / p->m;
-	ay = p->fy / p->m;
-	az = p->fz / p->m;
-	p->vx += ax * step;
-	p->vy += ay * step;
-	p->vz += az * step;
-	p->x += p->vx * step;
-	p->y += p->vy * step;
-	p->z += p->vz * step;
+	if (n->particle->prank == prank) {
+		// Update the velocity and position
+		ax = p->fx / p->m;
+		ay = p->fy / p->m;
+		az = p->fz / p->m;
+		p->vx += ax * step;
+		p->vy += ay * step;
+		p->vz += az * step;
+		p->x += p->vx * step;
+		p->y += p->vy * step;
+		p->z += p->vz * step;
+		// Broadcast the updated variables
+		double buf_send[6] = {p->x, p->y, p->z, p->vx, p->vy, p->vz};
+		for (int i = 0; i < psize; i++) {
+			if (i == prank) continue;
+			MPI_Isend(&buf_send[0], 6, MPI_DOUBLE, i, p->id, MPI_COMM_WORLD, &req_send);  // TODO: Replace with MPI_Ibcast
+			// CHECK: buf_send gets destroyed? maybe declare it somewhere else?
+		}
+	}
+	else {
+		// Receive the updated variables from other processes
+		double buf_recv[6];
+		MPI_Recv(&buf_recv[0], 6, MPI_DOUBLE, p->prank, p->id, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		// TODO: Use Irecv and Make sure received (somewhere else)
+		// TODO: Definitely join before the new iteration
+		// Update the velocity and position
+		p->x = buf_recv[0];
+		p->y = buf_recv[1];
+		p->z = buf_recv[2];
+		p->vx = buf_recv[3];
+		p->vy = buf_recv[4];
+		p->vz = buf_recv[5];
+	}
 
 	if (!is_particle_out_of_scope(p, newroot)) {
 		insert_particle(p, newroot);
@@ -290,21 +314,23 @@ bool is_particle_out_of_scope(particle_t* p, node* root)
 }
 
 // Compute all forces from a root on all the particles of a node
-void compute_force_in_node(node* root, node* n)
+void compute_force_in_node(node* root, node* n, int prank)
 {
 	if (n==NULL) return;
 
 	// If external node, compute all forces on the particle of the node
 	if ((n->particle != NULL) && (n->children == NULL)) {
-		n->particle->fx = 0;
-		n->particle->fy = 0;
-		n->particle->fz = 0;
-		compute_force_particle(root, n->particle);
+		if (n->particle->prank == prank) {
+			n->particle->fx = 0;
+			n->particle->fy = 0;
+			n->particle->fz = 0;
+			compute_force_particle(root, n->particle);
+		}
 	}
 	// If internal node, call the function on all children
 	if (n->children != NULL) {
 		for (int i = 0; i < 8; i++) {
-			compute_force_in_node(root, &n->children[i]);
+			compute_force_in_node(root, &n->children[i], prank);
 		}
 	}
 }
@@ -400,6 +426,7 @@ void print_node(node* n){
 	if (n->particle!=NULL) {
 		particle_t* p = n->particle;
 		printf(". Particle ID = %d", p->id);
+		printf(" prank = %d", p->prank);
 	}
 	printf("\n");
 }

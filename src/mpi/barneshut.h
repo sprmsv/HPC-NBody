@@ -12,7 +12,7 @@
 #include <algorithm>
 
 
-void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations);
+void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, int psize, int prank);
 
 void init_tree(particle_t* ranges, node* root);
 void clean_tree(node* root);
@@ -22,11 +22,11 @@ void create_children(node* parent);
 void init_node(node* n, node* parent, double minx, double maxx, double miny, double maxy, double minz, double maxz);
 int get_octrant(particle_t* p, node* n);
 
-void move_all_particles(node* root, node* n, double step);
-void move_particle(node* root, node* n, particle_t* p, double step);
+void move_all_particles(node* root, node* n, double step, int psize, int prank);
+void move_particle(node* root, node* n, particle_t* p, double step, int psize, int prank);
 bool is_particle_out_of_scope(particle_t* p, node* root);
 
-void compute_force_in_node(node* root, node* n);
+void compute_force_in_node(node* root, node* n, int prank);
 void compute_force_particle(node* n, particle_t* p);
 void compute_force(particle_t* p, double xpos, double ypos, double zpos, double mass);
 

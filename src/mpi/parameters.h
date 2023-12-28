@@ -1,7 +1,10 @@
 #ifndef PARAMETERS_H_
 #define PARAMETERS_H_
 
+#define DEBUG
+
 #include <stdbool.h>
+#include <mpi.h>
 
 #define GRAV_CONSTANT 0.5
 #define THETA 1.0
@@ -43,6 +46,7 @@ struct particles
 
 	// Identifier
 	int id;
+	int prank;
 
 	// Potential
 	double V;

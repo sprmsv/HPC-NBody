@@ -20,7 +20,6 @@
 typedef std::chrono::high_resolution_clock clk;
 typedef std::chrono::duration<double> second;
 
-
 void print_usage(char* name)
 {
 	std::cerr << "Usage: " << name << "<input-filename> <iterations> [-bh OR -bf]" << std::endl;
@@ -62,13 +61,13 @@ int main(int argc, char** argv)
 
 	// Read input file
 	nbr_particles = get_nbr_particles(argv[1]);
-	array = read_test_case(argv[1]);
+	array = read_test_case(argv[1], psize);
 	nbr_iterations = std::stoi(argv[2]);
 
 	// Run the simulation
 	auto start = clk::now();
 	if (BARNESHUT) {
-		nbodybarneshut(array, nbr_particles, nbr_iterations);
+		nbodybarneshut(array, nbr_particles, nbr_iterations, psize, prank);
 	}
 	else {
 		nbodybruteforce(array, nbr_particles, nbr_iterations);

@@ -1,6 +1,5 @@
 #include "barneshut.h"
 
-// #define DEBUG
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 {

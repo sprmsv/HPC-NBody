@@ -17,7 +17,7 @@ where :
 	V		: potential (not used in this simulation)
 */
 
-particle_t* read_test_case(const char* fn)
+particle_t* read_test_case(const char* fn, int psize)
 {
 	particle_t* mat;
 	int nbr_particles = 0;
@@ -45,6 +45,7 @@ particle_t* read_test_case(const char* fn)
 		if (m==0.) m = 1.;
 		mat[i].m = m;
 		mat[i].id = id;
+		mat[i].prank = (id - 1) % psize;
 		mat[i].V = V;
 		mat[i].parent = NULL;
 		mat[i].fx = 0.;

@@ -36,7 +36,7 @@
 .DS_Store
 .vscode/*
 *.o
-src/nbody
+src/*/nbody
 perf.data
 gmon.out
 
