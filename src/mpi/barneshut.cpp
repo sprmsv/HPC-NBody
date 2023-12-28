@@ -22,7 +22,7 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 
 	// Take time steps and move the particles
 	for (int it = 0; it < nbr_iterations; ++it) {
-		compute_force_in_node(root, root, prank);
+		compute_force_in_node(root, root, psize, prank);
 		// compute_bh_force(root);  // TODO: Update if necessary
 		move_all_particles(newroot, root, step, psize, prank);
 		// Swap the root pointers
@@ -30,6 +30,7 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 		root = newroot;
 		clean_tree(oldroot);
 		newroot = oldroot;
+		std::cout << "ITERATION " << it << std::endl;
 	}
 
 #ifdef DEBUG
@@ -255,46 +256,33 @@ void move_all_particles(node* newroot, node* n, double step, int psize, int pran
 void move_particle(node* newroot, node* n, particle_t* p, double step, int psize, int prank)
 {
 	double ax, ay, az;
-	MPI_Request req_send;
-	MPI_Request req_recv;
 
 	if ((p==NULL) || (n==NULL))
 		return;
 
-	if (n->particle->prank == prank) {
-		// Update the velocity and position
-		ax = p->fx / p->m;
-		ay = p->fy / p->m;
-		az = p->fz / p->m;
-		p->vx += ax * step;
-		p->vy += ay * step;
-		p->vz += az * step;
-		p->x += p->vx * step;
-		p->y += p->vy * step;
-		p->z += p->vz * step;
-		// Broadcast the updated variables
-		double buf_send[6] = {p->x, p->y, p->z, p->vx, p->vy, p->vz};
-		for (int i = 0; i < psize; i++) {
-			if (i == prank) continue;
-			MPI_Isend(&buf_send[0], 6, MPI_DOUBLE, i, p->id, MPI_COMM_WORLD, &req_send);  // TODO: Replace with MPI_Ibcast
-			// CHECK: buf_send gets destroyed? maybe declare it somewhere else?
-		}
-	}
-	else {
-		// Receive the updated variables from other processes
-		double buf_recv[6];
-		MPI_Recv(&buf_recv[0], 6, MPI_DOUBLE, p->prank, p->id, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		// TODO: Use Irecv and Make sure received (somewhere else)
-		// TODO: Definitely join before the new iteration
-		// Update the velocity and position
-		p->x = buf_recv[0];
-		p->y = buf_recv[1];
-		p->z = buf_recv[2];
-		p->vx = buf_recv[3];
-		p->vy = buf_recv[4];
-		p->vz = buf_recv[5];
+	// Update the communicated forces
+	if ((p->prank != prank) && (p->req != NULL)) {
+		// Wait for communication
+		MPI_Wait(&p->req, MPI_STATUS_IGNORE);  // TODO: Causes deadlock :: IT'S THE TAGS AGAIN !! OR OUT OF SCOPE !!
+		p->req = NULL;
+		// Update the forces from the buffer
+		p->fx = p->buf_f[0];
+		p->fy = p->buf_f[1];
+		p->fz = p->buf_f[2];
 	}
 
+	// Update the velocity and position
+	ax = p->fx / p->m;
+	ay = p->fy / p->m;
+	az = p->fz / p->m;
+	p->vx += ax * step;
+	p->vy += ay * step;
+	p->vz += az * step;
+	p->x += p->vx * step;
+	p->y += p->vy * step;
+	p->z += p->vz * step;
+
+	// Insert in the new root if still in scope
 	if (!is_particle_out_of_scope(p, newroot)) {
 		insert_particle(p, newroot);
 	}
@@ -314,23 +302,42 @@ bool is_particle_out_of_scope(particle_t* p, node* root)
 }
 
 // Compute all forces from a root on all the particles of a node
-void compute_force_in_node(node* root, node* n, int prank)
+void compute_force_in_node(node* root, node* n, int psize, int prank)
 {
 	if (n==NULL) return;
 
+	MPI_Request req_send;
+	MPI_Request req_recv;
+
 	// If external node, compute all forces on the particle of the node
 	if ((n->particle != NULL) && (n->children == NULL)) {
+		// If the particle is assigned to this process
 		if (n->particle->prank == prank) {
+			// Calculate the forces
 			n->particle->fx = 0;
 			n->particle->fy = 0;
 			n->particle->fz = 0;
 			compute_force_particle(root, n->particle);
+			// Broadcast the forces (non-blocking)
+			n->particle->buf_f[0] = n->particle->fx;
+			n->particle->buf_f[1] = n->particle->fy;
+			n->particle->buf_f[2] = n->particle->fz;
+			for (int rank = 0; rank < psize; rank++) {
+				if (rank == prank) continue;
+				MPI_Isend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &req_send);
+			}
+		}
+		// Otherwise
+		else {
+			// Receive the forces from the corresponding process (non-blocking)
+			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, &req_recv);
+			n->particle->req = req_recv;
 		}
 	}
 	// If internal node, call the function on all children
 	if (n->children != NULL) {
 		for (int i = 0; i < 8; i++) {
-			compute_force_in_node(root, &n->children[i], prank);
+			compute_force_in_node(root, &n->children[i], psize, prank);
 		}
 	}
 }

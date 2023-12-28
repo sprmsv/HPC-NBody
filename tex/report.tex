@@ -58,9 +58,12 @@
   - ::barneshut(, psize, prank)
 - paramteters.h
   - ::particle.prank
+  - ::particle.req
 - reader.h and reader.cpp
   - ::read_test_case(, psize)
   - particle.prank = (id - 1) \% psize
+  - particle.req = NULL
+  - particle.buf_f;
 - barneshut.cpp
   - compute_force_in_node(, int prank)
     - Only compute force if particle.prank matches

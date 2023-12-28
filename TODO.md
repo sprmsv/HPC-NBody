@@ -5,6 +5,10 @@
 *. PROBLEM: Segmentation fault when iterations are increased
 *. DOUBT: compute_bh_force seems unnecessary but is not expensive anyways
 
+*. IDEA: Also parallelize the move_particle part? Theoretical ratio changes!
+    - PRO: More fraction of code will be parallelized
+    - CON: Less time for communications!! -> Worse scaling
+
 0. Review the lecture slides
 
 1. A parallel version of the Barnes-Hut algorithm using MPI.

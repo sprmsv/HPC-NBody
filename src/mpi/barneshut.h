@@ -26,7 +26,7 @@ void move_all_particles(node* root, node* n, double step, int psize, int prank);
 void move_particle(node* root, node* n, particle_t* p, double step, int psize, int prank);
 bool is_particle_out_of_scope(particle_t* p, node* root);
 
-void compute_force_in_node(node* root, node* n, int prank);
+void compute_force_in_node(node* root, node* n, int psize, int prank);
 void compute_force_particle(node* n, particle_t* p);
 void compute_force(particle_t* p, double xpos, double ypos, double zpos, double mass);
 

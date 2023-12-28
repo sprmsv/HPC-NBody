@@ -1,7 +1,7 @@
 #ifndef PARAMETERS_H_
 #define PARAMETERS_H_
 
-#define DEBUG
+// #define DEBUG
 
 #include <stdbool.h>
 #include <mpi.h>
@@ -46,7 +46,12 @@ struct particles
 
 	// Identifier
 	int id;
+	
+	// Process 
 	int prank;
+	// Receive status and buffer  // TODO: Create force array instead!
+	MPI_Request req;
+	double buf_f[3];
 
 	// Potential
 	double V;
