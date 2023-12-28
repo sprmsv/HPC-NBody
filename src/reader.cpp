@@ -23,7 +23,6 @@ particle_t* read_test_case(const char* fn)
 	int nbr_particles = 0;
 	float x, y, z, vx, vy, vz, m, V;
 	int id;
-	int i;
 	FILE* f;
 
 	if ((f = fopen(fn, "r")) == NULL)
@@ -35,8 +34,7 @@ particle_t* read_test_case(const char* fn)
 	fscanf(f, "%d", &nbr_particles);
 	mat = (particle_t*) malloc(nbr_particles * sizeof(particle_t));
 
-	for (i = 0; i < nbr_particles; i++)
-	{
+	for (int i = 0; i < nbr_particles; i++) {
 		fscanf(f, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f", &x, &y, &z, &vx, &vy, &vz, &m, &id, &V);
 		mat[i].x = x;
 		mat[i].y = y;
@@ -103,6 +101,7 @@ particle_t getMinMax(particle_t* array, int nbr_particles)
 	mint = std::min(minx, miny);
 	mint = std::min(mint, minz);
 
+	// NOTE: This will fail if min and max have the same sign
 	particle_minmax.x = mint * SIZEOFSPACE;
 	particle_minmax.vx = maxt * SIZEOFSPACE;
 	particle_minmax.y = mint * SIZEOFSPACE;

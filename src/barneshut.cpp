@@ -1,85 +1,68 @@
 #include "barneshut.h"
 
+#define DEBUG
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 {
+	// Declare variables
 	double step = TIMESTEP;
 	node* root;
 	node* newroot;
 	node* oldroot;
 	particle_t ranges;
 
+	// Initialize the nodes
 	root = (node*) malloc(sizeof(node));
 	newroot = (node*) malloc(sizeof(node));
 	ranges = getMinMax(array, nbr_particles);
 	init_tree(&ranges, root);
 	init_tree(&ranges, newroot);
 
+	// Construct a tree from the particles
 	construct_bh_tree(array, root, nbr_particles);
+
+	// Take time steps and move the particles
 	for (int it = 0; it < nbr_iterations; ++it) {
 		compute_force_in_node(root, root);
-		compute_bh_force(root);  // CHECK: Why?
+		compute_bh_force(root);  // NOTE: Calling this function is not necessary
 		move_all_particles(newroot, root, step);
+		// Swap the root pointers
 		oldroot = root;
 		root = newroot;
+		clean_tree(oldroot);
 		newroot = oldroot;
-		clean_tree(newroot);
 	}
 
-	clean_tree(newroot);
+#ifdef DEBUG
+	print_tree(root);
+#endif
+
+	clean_tree(root);
 	clean_tree(newroot);
 	free(root);
 	free(newroot);
 }
 
-// Move all the particles from node n to new_root
-void move_all_particles(node* new_root, node* n, double step)
+
+// Init the tree
+// Remark: We use a particle struct to transfer min and max values from main
+void init_tree(particle_t* ranges, node* root)
 {
-	if (n->children != NULL) {
-		for (int i = 0; i < 8; i++){
-			move_all_particles(new_root, &n->children[i], step);
-		}
-	}
-	else {
-		particle_t* p = n->particle;
-		move_particle(new_root, n, p, step);
-	}
-}
-
-// Compute new position/velocity of the particle
-void move_particle(node* root, node* n, particle_t* p, double step)
-{
-	double ax,ay,az;
-
-	if ((p==NULL) || (n==NULL))
-		return;
-
-	ax = p->fx/p->m;
-	ay = p->fy/p->m;
-	az = p->fz/p->m;
-	p->vx += ax*step;
-	p->vy += ay*step;
-	p->vz += az*step;
-	p->x += p->vx * step;
-	p->y += p->vy * step;
-	p->z += p->vz * step;
-
-	if (!is_particle_out_of_scope(p, root)) {
-		insert_particle(p, root);
-	}
-	else {
-		n->particle = NULL;
-	}
-}
-
-// Check if a particle is out of scope (lost body in space)
-bool is_particle_out_of_scope(particle_t* p, node* root)
-{
-	if ((p->x < root->minx) || (p->y < root->miny) || (p->z < root->minz))
-		return true;
-	if ((p->x > root->maxx) || (p->y > root->maxy) || (p->z > root->maxz))
-		return true;
-	return false;
+	root->minx = ranges->x;
+	root->maxx = ranges->vx;
+	root->miny = ranges->y;
+	root->maxy = ranges->vy;
+	root->minz = ranges->z;
+	root->maxz = ranges->vz;
+	root->particle = NULL;
+	root->sub_nbr_particles = 0;
+	root->parent = NULL;
+	root->children = NULL;
+	root->centerx = 0.;
+	root->centery = 0.;
+	root->centerz = 0.;
+	root->mass = 0.;
+	root->depth = 0;
 }
 
 // Clean tree root
@@ -95,90 +78,6 @@ void clean_tree(node* root)
 		free(root->children);
 		root->children = NULL;
 		root->sub_nbr_particles=0;
-	}
-}
-
-// compute the forces on the BH tree
-// CHECK: What does this do? Seems like computing force of the external nodes on their own particle!
-void compute_bh_force(node* n)
-{
-	if (n->children != NULL) {
-		for (int i = 0; i < 8; i++) {
-			compute_bh_force(&n->children[i]);
-		}
-	}
-	else {
-		compute_force_particle(n, n->particle);
-	}
-}
-
-// Compute force of node n on particle p
-void compute_force_particle(node* n, particle_t* p)
-{
-	double diffx, diffy, diffz, distance;
-	double size;
-
-	// If the node is empty
-	if ((n==NULL) || (n->sub_nbr_particles==0))
-		return;
-
-	// If the node is external
-	if ((n->particle != NULL) && (n->children==NULL)) {
-		compute_force(p, n->centerx, n->centery, n->centerz, n->mass);
-	}
-	// If the node is internal
-	else {
-		size = n->maxx - n->minx;
-		diffx = n->centerx - p->x;
-		diffy = n->centery - p->y;
-		diffz = n->centerz - p->z;
-		distance = sqrt(diffx*diffx + diffy*diffy + diffz*diffz);
-		if (size / distance < THETA) {
-			// Use an approximation of the force if the node is far away
-			compute_force(p, n->centerx, n->centery, n->centerz, n->mass);
-		}
-		else {
-			// Otherwise, run the procedure recursively on each of the current node's children.
-			for (int i = 0; i < 8; i++) {
-				compute_force_particle(&n->children[i], p);
-			}
-		}
-	}
-}
-
-// Compute force (accumulates on p->f)
-void compute_force(particle_t* p, double xpos, double ypos, double zpos, double mass)
-{
-	double xsep, ysep, zsep, dist_sq, gravity;
-
-	xsep = xpos - p->x;
-	ysep = ypos - p->y;
-	zsep = zpos - p->z;
-	dist_sq = std::max((xsep*xsep)+ (ysep*ysep)+(zsep*zsep), 0.01);
-	gravity = GRAV_CONSTANT * (p->m) * (mass) / dist_sq / sqrt(dist_sq);
-
-	p->fx += gravity * xsep;
-	p->fy += gravity * ysep;
-	p->fz += gravity * zsep;
-}
-
-// Compute all forces on all the particles of a node
-void compute_force_in_node(node* n, node* root)
-{
-	if (n==NULL) return;
-
-	if ((n->particle != NULL) && (n->children == NULL)) {
-		// Compute all forces on the particle of the node
-		n->particle->fx = 0;
-		n->particle->fy = 0;
-		n->particle->fz = 0;
-		compute_force_particle(root, n->particle);
-	}
-	if (n->children != NULL) {
-		// Recall on all children nodes
-		for(int i = 0; i < 8; i++) {
-			compute_force_in_node(&n->children[i], root);
-		}
 	}
 }
 
@@ -212,7 +111,7 @@ void insert_particle(particle_t* p, node* n)
 
 	// There is already a particle
 	else {
-		// Insert the old particle in the correct children (if necessary)
+		// Insert the old particle in the correct child (if necessary)
 		if (n->children==NULL) {
 			create_children(n);
 			particle_t* particle_parent = n->particle;
@@ -340,23 +239,175 @@ int get_octrant(particle_t* p, node* n)
 	return octrant;
 }
 
-// Init the tree
-// Remark: We use a particle struct to transfer min and max values from main
-void init_tree(particle_t* ranges, node* root)
+// Update position/velocity of all the particles of node n and store them to a new root
+void move_all_particles(node* newroot, node* n, double step)
 {
-	root->minx = ranges->x;
-	root->maxx = ranges->vx;
-	root->miny = ranges->y;
-	root->maxy = ranges->vy;
-	root->minz = ranges->z;
-	root->maxz = ranges->vz;
-	root->particle = NULL;
-	root->sub_nbr_particles = 0;
-	root->parent = NULL;
-	root->children = NULL;
-	root->centerx = 0.;
-	root->centery = 0.;
-	root->centerz = 0.;
-	root->mass = 0.;
-	root->depth = 0;
+	if (n->children != NULL) {
+		for (int i = 0; i < 8; i++){
+			move_all_particles(newroot, &n->children[i], step);
+		}
+	}
+	else {
+		particle_t* p = n->particle;
+		move_particle(newroot, n, p, step);
+	}
+}
+
+// Compute position/velocity of the particle and store it in a new root
+void move_particle(node* newroot, node* n, particle_t* p, double step)
+{
+	double ax, ay, az;
+
+	if ((p==NULL) || (n==NULL))
+		return;
+
+	ax = p->fx / p->m;
+	ay = p->fy / p->m;
+	az = p->fz / p->m;
+	p->vx += ax * step;
+	p->vy += ay * step;
+	p->vz += az * step;
+	p->x += p->vx * step;
+	p->y += p->vy * step;
+	p->z += p->vz * step;
+
+	if (!is_particle_out_of_scope(p, newroot)) {
+		insert_particle(p, newroot);
+	}
+	else {
+		n->particle = NULL;
+	}
+}
+
+// Check if a particle is out of scope (lost body in space)
+bool is_particle_out_of_scope(particle_t* p, node* root)
+{
+	if ((p->x < root->minx) || (p->y < root->miny) || (p->z < root->minz))
+		return true;
+	if ((p->x > root->maxx) || (p->y > root->maxy) || (p->z > root->maxz))
+		return true;
+	return false;
+}
+
+// Compute all forces from a root on all the particles of a node
+void compute_force_in_node(node* root, node* n)
+{
+	if (n==NULL) return;
+
+	// If external node, compute all forces on the particle of the node
+	if ((n->particle != NULL) && (n->children == NULL)) {
+		n->particle->fx = 0;
+		n->particle->fy = 0;
+		n->particle->fz = 0;
+		compute_force_particle(root, n->particle);
+	}
+	// If internal node, call the function on all children
+	if (n->children != NULL) {
+		for (int i = 0; i < 8; i++) {
+			compute_force_in_node(root, &n->children[i]);
+		}
+	}
+}
+
+// Compute force of node n on particle p
+void compute_force_particle(node* n, particle_t* p)
+{
+	double diffx, diffy, diffz, distance;
+	double size;
+
+	// If the node is empty
+	if ((n==NULL) || (n->sub_nbr_particles==0))
+		return;
+
+	// If the node is external
+	if ((n->particle != NULL) && (n->children==NULL)) {
+		compute_force(p, n->centerx, n->centery, n->centerz, n->mass);
+	}
+	// If the node is internal, it depends on its relatve distance
+	else {
+		size = n->maxx - n->minx;
+		diffx = n->centerx - p->x;
+		diffy = n->centery - p->y;
+		diffz = n->centerz - p->z;
+		distance = sqrt(diffx*diffx + diffy*diffy + diffz*diffz);
+		// Use an approximation of the force if the node is far away
+		if (size / distance < THETA) {
+			compute_force(p, n->centerx, n->centery, n->centerz, n->mass);
+		}
+		// Otherwise, run the procedure recursively on each of the current node's children.
+		else {
+			for (int i = 0; i < 8; i++) {
+				compute_force_particle(&n->children[i], p);
+			}
+		}
+	}
+}
+
+// Compute force (accumulates on p->f)
+void compute_force(particle_t* p, double xpos, double ypos, double zpos, double mass)
+{
+	double xsep, ysep, zsep, dist_sq, gravity;
+
+	xsep = xpos - p->x;
+	ysep = ypos - p->y;
+	zsep = zpos - p->z;
+	dist_sq = std::max((xsep*xsep)+ (ysep*ysep)+(zsep*zsep), 0.01);
+	gravity = GRAV_CONSTANT * (p->m) * (mass) / dist_sq / sqrt(dist_sq);
+
+	p->fx += gravity * xsep;
+	p->fy += gravity * ysep;
+	p->fz += gravity * zsep;
+}
+
+// Accumulate the forces on the particles from their innermost parent node
+void compute_bh_force(node* n)
+{
+	// If the node is external, compute the force of the particle on itself 
+	if (n->children == NULL) {
+		compute_force_particle(n, n->particle);
+	}
+	// Otherwise, recall the function on all children
+	else {
+		for (int i = 0; i < 8; i++) {
+			compute_bh_force(&n->children[i]);
+		}
+	}
+}
+
+// print a tree
+void print_tree(node* root){
+	node* child;
+	if (root->children != NULL){
+		for (int i = 0; i < 8; i++){
+			child = &root->children[i];
+			print_tree(child);
+		}
+	}
+	print_node(root);
+}
+
+// print a node 
+void print_node(node* n){
+	int d = n->depth;
+	for (int i=0; i < d; i++) {
+		printf("\t");
+	}
+	printf("[level %d]", d);
+	printf(" ([%f:%f:%f])", n->centerx, n->centery, n->centerz);
+	printf(" Node ");
+	printf(" M = %f", n->mass);
+	printf(" has %d particles ", n->sub_nbr_particles);
+	if (n->particle!=NULL) {
+		particle_t* p = n->particle;
+		printf(". Particle ID = %d", p->id);
+	}
+	printf("\n");
+}
+
+// print a particle 
+void print_particle(particle_t* p){
+	printf("[Particle %d]", p->id);
+	printf(" position ([%f:%f:%f])", p->x, p->y, p->z);
+	printf(" M = %f", p->m);
+	printf("\n");
 }
