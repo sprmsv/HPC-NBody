@@ -37,6 +37,7 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 	print_tree(root);
 #endif
 
+	// Deallocate memory
 	clean_tree(root);
 	clean_tree(newroot);
 	free(root);

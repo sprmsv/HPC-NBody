@@ -3,6 +3,7 @@
 0. Profiling + sequential fraction + Amdhal’s and Gustafson’s laws
 
 *. PROBLEM: Segmentation fault when iterations are increased
+*. DOUBT: compute_bh_force seems unnecessary but is not expensive anyways
 
 0. Review the lecture slides
 

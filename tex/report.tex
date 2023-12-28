@@ -30,10 +30,16 @@
   - Improving IO
   - No change in the logic of the code
 
-2. Profiling
-    - time
-    - calls
-    - cache misses
+2. Profiling BH
+  - time:
+    - gprof: 80\% on compute_force_particle + 8\% insert_particle
+    - perf: 70\% on compute_force_in_node + 12\% move_all_particles
+  - cache misses: only 0.13\%
+    
+2. Profiling BF
+  - time: not much can be inferred
+  - cache misses: only 0.13\%
+
 
 \section{Introduction}
 ...

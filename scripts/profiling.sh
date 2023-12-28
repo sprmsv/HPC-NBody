@@ -11,5 +11,5 @@ module purge
 module load intel
 make -C src clean
 make -C src profiling
-sbatch --ntasks=1 -o $FOLDER/profiling-bh.out jobs/job-profiling.sh -bh $FOLDER/profiling-bh.out
-sbatch --ntasks=1 -o $FOLDER/profiling-bf.out jobs/job-profiling.sh -bf $FOLDER/profiling-bf.out
+sbatch --ntasks=1 -o $FOLDER/profiling-bh.out scripts/job-profiling.sh -bh $FOLDER/profiling-bh.out
+sbatch --ntasks=1 -o $FOLDER/profiling-bf.out scripts/job-profiling.sh -bf $FOLDER/profiling-bf.out
