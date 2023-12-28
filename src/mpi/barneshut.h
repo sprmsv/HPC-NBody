@@ -1,13 +1,15 @@
 #ifndef NBODYBARNESHUT_H_
 #define NBODYBARNESHUT_H_
 
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "parameters.h"
 #include "reader.h"
 #include "math.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <mpi.h>
+
+#include <algorithm>
 
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations);
