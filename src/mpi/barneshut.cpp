@@ -262,9 +262,9 @@ void move_particle(node* newroot, node* n, particle_t* p, double step, int psize
 	if ((p==NULL) || (n==NULL))
 		return;
 
-	// Update the communicated forces
+	// Update the communicated forces if necessary
 	if (p->prank != prank) {
-		// Wait for communication
+		// Wait for receive request
 		MPI_Wait(p->req_recv, MPI_STATUS_IGNORE);
 		delete p->req_recv;
 		// Update the forces from the buffer

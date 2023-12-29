@@ -66,11 +66,12 @@
   - particle.buf_f;
 - barneshut.cpp
   - compute_force_in_node(, int prank)
-    - Only compute force if particle.prank matches
+    - If particle.prank matches, compute and send+wait the calculations to all the other processes
+    - Otherwise, post receive request from the corresponding process
   - move_all_particles(, int prank)
   - move_particle(, int prank)
-    - If particle.prank matches, send the calculations to all the other processes
-    - Otherwise, receive the calculations from the corresponding process
+      - If particle.prank matches, nothing
+      - Otherwise, wait for the receive requests
 
 \section{Results}
 ...

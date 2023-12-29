@@ -30,7 +30,7 @@ void compute_force_in_node(node* root, node* n, int psize, int prank);
 void compute_force_particle(node* n, particle_t* p);
 void compute_force(particle_t* p, double xpos, double ypos, double zpos, double mass);
 
-void compute_bh_force(node* n) ;
+void compute_bh_force(node* n);
 
 void print_tree(node * n);
 void print_node(node * n);
