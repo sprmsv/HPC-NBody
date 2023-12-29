@@ -265,8 +265,8 @@ void move_particle(node* newroot, node* n, particle_t* p, double step, int psize
 	// Update the communicated forces
 	if (p->prank != prank) {
 		// Wait for communication
-		MPI_Wait(p->req, MPI_STATUS_IGNORE);
-		delete p->req;
+		MPI_Wait(p->req_recv, MPI_STATUS_IGNORE);
+		delete p->req_recv;
 		// Update the forces from the buffer
 		p->fx = p->buf_f[0];
 		p->fy = p->buf_f[1];
@@ -321,21 +321,22 @@ void compute_force_in_node(node* root, node* n, int psize, int prank)
 			n->particle->buf_f[0] = n->particle->fx;
 			n->particle->buf_f[1] = n->particle->fy;
 			n->particle->buf_f[2] = n->particle->fz;
-			MPI_Request req_send[psize];
+			n->particle->req_send = new MPI_Request[psize];
 			for (int rank = 0; rank < psize; rank++) {
 				if (rank == prank) {
-					req_send[rank] = MPI_REQUEST_NULL;
+					n->particle->req_send[rank] = MPI_REQUEST_NULL;
 					continue;
 				}
-				MPI_Issend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &req_send[rank]);
+				MPI_Issend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &n->particle->req_send[rank]);
 			}
-			MPI_Waitall(psize, req_send, MPI_STATUSES_IGNORE);
+			MPI_Waitall(psize, n->particle->req_send, MPI_STATUSES_IGNORE);
+			delete[] n->particle->req_send;
 		}
 		// Otherwise
 		else {
 			// Receive the forces from the corresponding process (non-blocking)
-			n->particle->req = new MPI_Request;
-			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, n->particle->req);
+			n->particle->req_recv = new MPI_Request;
+			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, n->particle->req_recv);
 		}
 	}
 	// If internal node, call the function on all children

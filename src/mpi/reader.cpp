@@ -46,7 +46,8 @@ particle_t* read_test_case(const char* fn, int psize)
 		mat[i].m = m;
 		mat[i].id = id;
 		mat[i].prank = (id - 1) % psize;
-		mat[i].req = nullptr;
+		mat[i].req_send = nullptr;
+		mat[i].req_recv = nullptr;
 		mat[i].V = V;
 		mat[i].parent = NULL;
 		mat[i].fx = 0.;
