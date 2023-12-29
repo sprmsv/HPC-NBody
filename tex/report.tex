@@ -77,7 +77,13 @@
 ...
 
 \section{Discussion}
-...
+
+IDEA 1: broadcast the computed forces for each particle to overlap with computation.
+Fails on large problems because of SO MANY communications!
+
+- Unlike hw5, it is not straightforward to overlap computation of forces with communication
+  because the dependencies are universal (and not local).
+
 
 \section{Reproducibility}
 ...

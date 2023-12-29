@@ -3,7 +3,6 @@
 
 #include "parameters.h"
 #include "barneshut.h"
-#include "bruteforce.h"
 #include "reader.h"
 
 #include <chrono>
@@ -22,7 +21,7 @@ typedef std::chrono::duration<double> second;
 
 void print_usage(char* name)
 {
-	std::cerr << "Usage: " << name << "<input-filename> <iterations> [-bh OR -bf]" << std::endl;
+	std::cerr << "Usage: " << name << "<input-filename> <iterations>" << std::endl;
 	exit(1);
 }
 
@@ -38,24 +37,9 @@ int main(int argc, char** argv)
 	particle_t* array;
 	int nbr_particles;
 	int nbr_iterations;
-	bool BARNESHUT = false;
 
 	// Read method
-	if (argc == 3) {
-		BARNESHUT = false;
-	}
-	else if (argc == 4) {
-		if (!strcmp(argv[3], "-bh")) {
-			BARNESHUT = true;
-		}
-		else if (!strcmp(argv[3], "-bf")) {
-			BARNESHUT = false;
-		}
-		else {
-			print_usage(argv[0]);
-		}
-	}
-	else {
+	if (argc != 3) {
 		print_usage(argv[0]);
 	}
 
@@ -66,12 +50,7 @@ int main(int argc, char** argv)
 
 	// Run the simulation
 	auto start = clk::now();
-	if (BARNESHUT) {
-		nbodybarneshut(array, nbr_particles, nbr_iterations, psize, prank);
-	}
-	else {
-		nbodybruteforce(array, nbr_particles, nbr_iterations);
-	}
+	nbodybarneshut(array, nbr_particles, nbr_iterations, psize, prank);
 	second time = clk::now() - start;
 
 	// Free memory
@@ -80,7 +59,7 @@ int main(int argc, char** argv)
 	// Messages
 	if (prank == 0) {
 		std::cout << argv[1] << ": "
-			<< "BH " << BARNESHUT << "\t"
+			<< "BH " << 1 << "\t"
 			<< "N " << nbr_particles << "\t"
 			<< "ITERS " << nbr_iterations << "\t"
 			<< "DT " << TIMESTEP << "\t"

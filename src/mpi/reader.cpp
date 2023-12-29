@@ -36,23 +36,21 @@ particle_t* read_test_case(const char* fn, int psize)
 
 	for (int i = 0; i < nbr_particles; i++) {
 		fscanf(f, "%f\t%f\t%f\t%f\t%f\t%f\t%f\t%d\t%f", &x, &y, &z, &vx, &vy, &vz, &m, &id, &V);
-		mat[i].x = x;
-		mat[i].y = y;
-		mat[i].z = z;
-		mat[i].vx = vx;
-		mat[i].vy = vy;
-		mat[i].vz = vz;
+		mat[i].x[0] = x;
+		mat[i].x[1] = y;
+		mat[i].x[2] = z;
+		mat[i].v[0] = vx;
+		mat[i].v[1] = vy;
+		mat[i].v[2] = vz;
 		if (m==0.) m = 1.;
 		mat[i].m = m;
 		mat[i].id = id;
 		mat[i].prank = (id - 1) % psize;
-		mat[i].req_send = nullptr;
-		mat[i].req_recv = nullptr;
 		mat[i].V = V;
 		mat[i].parent = NULL;
-		mat[i].fx = 0.;
-		mat[i].fy = 0.;
-		mat[i].fz = 0.;
+		mat[i].f[0] = 0.;
+		mat[i].f[1] = 0.;
+		mat[i].f[2] = 0.;
 	}
 
 	if (f !=stdin) fclose(f);
@@ -91,12 +89,12 @@ particle_t getMinMax(particle_t* array, int nbr_particles)
 
 	for (i = 0; i < nbr_particles; i++)
 	{
-		if (array[i].x < minx) minx = array[i].x;
-		if (array[i].x > maxx) maxx = array[i].x;
-		if (array[i].y < miny) miny = array[i].y;
-		if (array[i].y > maxy) maxy = array[i].y;
-		if (array[i].z < minz) minz = array[i].z;
-		if (array[i].z > maxz) maxz = array[i].z;
+		if (array[i].x[0] < minx) minx = array[i].x[0];
+		if (array[i].x[0] > maxx) maxx = array[i].x[0];
+		if (array[i].x[1] < miny) miny = array[i].x[1];
+		if (array[i].x[1] > maxy) maxy = array[i].x[1];
+		if (array[i].x[2] < minz) minz = array[i].x[2];
+		if (array[i].x[2] > maxz) maxz = array[i].x[2];
 	}
 
 	maxt = std::max(maxx, maxy);
@@ -105,12 +103,12 @@ particle_t getMinMax(particle_t* array, int nbr_particles)
 	mint = std::min(mint, minz);
 
 	// NOTE: This will fail if min and max have the same sign
-	particle_minmax.x = mint * SIZEOFSPACE;
-	particle_minmax.vx = maxt * SIZEOFSPACE;
-	particle_minmax.y = mint * SIZEOFSPACE;
-	particle_minmax.vy = maxt * SIZEOFSPACE;
-	particle_minmax.z = mint * SIZEOFSPACE;
-	particle_minmax.vz = maxt * SIZEOFSPACE;
+	particle_minmax.x[0] = mint * SIZEOFSPACE;
+	particle_minmax.v[0] = maxt * SIZEOFSPACE;
+	particle_minmax.x[1] = mint * SIZEOFSPACE;
+	particle_minmax.v[1] = maxt * SIZEOFSPACE;
+	particle_minmax.x[2] = mint * SIZEOFSPACE;
+	particle_minmax.v[2] = maxt * SIZEOFSPACE;
 
 	return particle_minmax;
 }

@@ -1,7 +1,7 @@
 #ifndef PARAMETERS_H_
 #define PARAMETERS_H_
 
-// #define DEBUG
+#define DEBUG
 
 #include <stdbool.h>
 #include <mpi.h>
@@ -27,36 +27,19 @@ typedef struct nodes node;
 struct particles
 {
 	// Position
-	double x;
-	double y;
-	double z;
-
+	double x[3];
 	// Speed
-	double vx;
-	double vy;
-	double vz;
-
+	double v[3];
 	// Force
-	double fx;
-	double fy;
-	double fz;
-
+	double f[3];
 	// Mass
 	double m;
-
 	// Identifier
 	int id;
-	
 	// Process 
 	int prank;
-	// Communication requests and buffers  // TODO: Create force array instead!
-	MPI_Request* req_recv;
-	MPI_Request* req_send;
-	double buf_f[3];
-
 	// Potential
 	double V;
-
 	// Parent node
 	node* parent;
 };

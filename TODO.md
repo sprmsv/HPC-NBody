@@ -2,7 +2,6 @@
 
 0. Profiling + sequential fraction + Amdhal’s and Gustafson’s laws
 
-*. PROBLEM: Segmentation fault when iterations are increased
 *. DOUBT: compute_bh_force seems unnecessary but is not expensive anyways
 
 *. IDEA: Also parallelize the move_particle part? Theoretical ratio changes!

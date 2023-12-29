@@ -4,7 +4,7 @@ LD = ${CXX}
 LDFLAGS = ${CXXFLAGS}
 LDFLAGS += -lm
 
-OBJS = nbody.o reader.o bruteforce.o barneshut.o
+OBJS = nbody.o reader.o barneshut.o
 
 all: clean build remove_objs
 

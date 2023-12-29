@@ -1,5 +1,7 @@
 #include "barneshut.h"
 
+#include <cassert>
+
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, int psize, int prank)
 {
@@ -24,16 +26,14 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 	for (int it = 0; it < nbr_iterations; ++it) {
 		compute_force_in_node(root, root, psize, prank);
 		// compute_bh_force(root);  // TODO: Update if necessary
+		communicate(array, nbr_particles, psize, prank);
 		move_all_particles(newroot, root, step, psize, prank);
 		// Swap the root pointers
 		oldroot = root;
 		root = newroot;
 		clean_tree(oldroot);
 		newroot = oldroot;
-		std::cout<< "PROCESS " << prank << "\tITERATION " << it << std::endl;
-		MPI_Barrier(MPI_COMM_WORLD);  // TODO: Need?
 	}
-	MPI_Barrier(MPI_COMM_WORLD);  // TODO: Move outside of the loop
 
 #ifdef DEBUG
 	if (prank == 0) print_tree(root);
@@ -50,12 +50,12 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 // Remark: We use a particle struct to transfer min and max values from main
 void init_tree(particle_t* ranges, node* root)
 {
-	root->minx = ranges->x;
-	root->maxx = ranges->vx;
-	root->miny = ranges->y;
-	root->maxy = ranges->vy;
-	root->minz = ranges->z;
-	root->maxz = ranges->vz;
+	root->minx = ranges->x[0];
+	root->maxx = ranges->v[0];
+	root->miny = ranges->x[1];
+	root->maxy = ranges->v[1];
+	root->minz = ranges->x[2];
+	root->maxz = ranges->v[2];
 	root->particle = NULL;
 	root->sub_nbr_particles = 0;
 	root->parent = NULL;
@@ -103,9 +103,9 @@ void insert_particle(particle_t* p, node* n)
 	// there is no particle
 	if ((n->sub_nbr_particles == 0) && (n->children==NULL)) {
 		n->particle = p;
-		n->centerx = p->x;
-		n->centery = p->y;
-		n->centerz = p->z;
+		n->centerx = p->x[0];
+		n->centery = p->x[1];
+		n->centerz = p->x[2];
 		n->mass = p->m;
 		n->sub_nbr_particles++;
 		p->parent = n;
@@ -202,9 +202,9 @@ int get_octrant(particle_t* p, node* n)
 	if (p==NULL)
 		std::cerr << "ERROR: Particle is NULL" << std::endl;
 
-	if (p->x <= x_center) {
-		if (p->y <= y_center) {
-			if (p->z <= z_center) {
+	if (p->x[0] <= x_center) {
+		if (p->x[1] <= y_center) {
+			if (p->x[2] <= z_center) {
 				octrant = SW_DOWN;
 			}
 			else {
@@ -212,7 +212,7 @@ int get_octrant(particle_t* p, node* n)
 			}
 		}
 		else {
-			if (p->z <= z_center) {
+			if (p->x[2] <= z_center) {
 				octrant = SE_DOWN;
 			}
 			else {
@@ -221,8 +221,8 @@ int get_octrant(particle_t* p, node* n)
 		}
 	}
 	else {
-		if (p->y <= y_center) {
-			if (p->z <= z_center) {
+		if (p->x[1] <= y_center) {
+			if (p->x[2] <= z_center) {
 				octrant = SW_UP;
 			}
 			else {
@@ -230,7 +230,7 @@ int get_octrant(particle_t* p, node* n)
 			}
 		}
 		else {
-			if (p->z <= z_center) {
+			if (p->x[2] <= z_center) {
 				octrant = SE_UP;
 			}
 			else {
@@ -262,27 +262,16 @@ void move_particle(node* newroot, node* n, particle_t* p, double step, int psize
 	if ((p==NULL) || (n==NULL))
 		return;
 
-	// Update the communicated forces if necessary
-	if (p->prank != prank) {
-		// Wait for receive request
-		MPI_Wait(p->req_recv, MPI_STATUS_IGNORE);
-		delete p->req_recv;
-		// Update the forces from the buffer
-		p->fx = p->buf_f[0];
-		p->fy = p->buf_f[1];
-		p->fz = p->buf_f[2];
-	}
-
 	// Update the velocity and position
-	ax = p->fx / p->m;
-	ay = p->fy / p->m;
-	az = p->fz / p->m;
-	p->vx += ax * step;
-	p->vy += ay * step;
-	p->vz += az * step;
-	p->x += p->vx * step;
-	p->y += p->vy * step;
-	p->z += p->vz * step;
+	ax = p->f[0] / p->m;
+	ay = p->f[1] / p->m;
+	az = p->f[2] / p->m;
+	p->v[0] += ax * step;
+	p->v[1] += ay * step;
+	p->v[2] += az * step;
+	p->x[0] += p->v[0] * step;
+	p->x[1] += p->v[1] * step;
+	p->x[2] += p->v[2] * step;
 
 	// Insert in the new root if still in scope
 	if (!is_particle_out_of_scope(p, newroot)) {
@@ -296,9 +285,9 @@ void move_particle(node* newroot, node* n, particle_t* p, double step, int psize
 // Check if a particle is out of scope (lost body in space)
 bool is_particle_out_of_scope(particle_t* p, node* root)
 {
-	if ((p->x < root->minx) || (p->y < root->miny) || (p->z < root->minz))
+	if ((p->x[0] < root->minx) || (p->x[1] < root->miny) || (p->x[2] < root->minz))
 		return true;
-	if ((p->x > root->maxx) || (p->y > root->maxy) || (p->z > root->maxz))
+	if ((p->x[0] > root->maxx) || (p->x[1] > root->maxy) || (p->x[2] > root->maxz))
 		return true;
 	return false;
 }
@@ -313,30 +302,10 @@ void compute_force_in_node(node* root, node* n, int psize, int prank)
 		// If the particle is assigned to this process
 		if (n->particle->prank == prank) {
 			// Calculate the forces
-			n->particle->fx = 0;
-			n->particle->fy = 0;
-			n->particle->fz = 0;
+			n->particle->f[0] = 0;
+			n->particle->f[1] = 0;
+			n->particle->f[2] = 0;
 			compute_force_particle(root, n->particle);
-			// Broadcast the forces (non-blocking)
-			n->particle->buf_f[0] = n->particle->fx;
-			n->particle->buf_f[1] = n->particle->fy;
-			n->particle->buf_f[2] = n->particle->fz;
-			n->particle->req_send = new MPI_Request[psize];
-			for (int rank = 0; rank < psize; rank++) {
-				if (rank == prank) {
-					n->particle->req_send[rank] = MPI_REQUEST_NULL;
-					continue;
-				}
-				MPI_Issend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &n->particle->req_send[rank]);
-			}
-			MPI_Waitall(psize, n->particle->req_send, MPI_STATUSES_IGNORE);
-			delete[] n->particle->req_send;
-		}
-		// Otherwise
-		else {
-			// Receive the forces from the corresponding process (non-blocking)
-			n->particle->req_recv = new MPI_Request;
-			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, n->particle->req_recv);
 		}
 	}
 	// If internal node, call the function on all children
@@ -364,9 +333,9 @@ void compute_force_particle(node* n, particle_t* p)
 	// If the node is internal, it depends on its relatve distance
 	else {
 		size = n->maxx - n->minx;
-		diffx = n->centerx - p->x;
-		diffy = n->centery - p->y;
-		diffz = n->centerz - p->z;
+		diffx = n->centerx - p->x[0];
+		diffy = n->centery - p->x[1];
+		diffz = n->centerz - p->x[2];
 		distance = sqrt(diffx*diffx + diffy*diffy + diffz*diffz);
 		// Use an approximation of the force if the node is far away
 		if (size / distance < THETA) {
@@ -386,15 +355,15 @@ void compute_force(particle_t* p, double xpos, double ypos, double zpos, double 
 {
 	double xsep, ysep, zsep, dist_sq, gravity;
 
-	xsep = xpos - p->x;
-	ysep = ypos - p->y;
-	zsep = zpos - p->z;
+	xsep = xpos - p->x[0];
+	ysep = ypos - p->x[1];
+	zsep = zpos - p->x[2];
 	dist_sq = std::max((xsep*xsep)+ (ysep*ysep)+(zsep*zsep), 0.01);
 	gravity = GRAV_CONSTANT * (p->m) * (mass) / dist_sq / sqrt(dist_sq);
 
-	p->fx += gravity * xsep;
-	p->fy += gravity * ysep;
-	p->fz += gravity * zsep;
+	p->f[0] += gravity * xsep;
+	p->f[1] += gravity * ysep;
+	p->f[2] += gravity * zsep;
 }
 
 // Accumulate the forces on the particles from their innermost parent node
@@ -409,6 +378,62 @@ void compute_bh_force(node* n)
 		for (int i = 0; i < 8; i++) {
 			compute_bh_force(&n->children[i]);
 		}
+	}
+}
+
+// Communicate the computed forces to the other processes
+void communicate(particle_t* array, int nbr_particles, int psize, int prank)
+{
+	// Return if not multiprocessing
+	if (psize < 2) return;
+
+	// Declare varialbes
+	int nbr_particles_send = nbr_particles / psize + ((nbr_particles % psize) > prank);
+	int nbr_particles_recv = nbr_particles - nbr_particles_send;
+	int ids_send[nbr_particles_send];
+	int ids_recv[nbr_particles_recv];
+	double forces_send[3 * nbr_particles_send];
+	double forces_recv[3 * nbr_particles_recv];
+
+	// Pack the send buffers
+	int i_send = 0;
+	for (int i_array = 0; i_array < nbr_particles; i_array++) {
+		particle_t& p = array[i_array];
+		if (p.prank == prank) {
+			ids_send[i_send] = i_array;
+			forces_send[3 * i_send + 0] = p.f[0];
+			forces_send[3 * i_send + 1] = p.f[1];
+			forces_send[3 * i_send + 2] = p.f[2];
+			i_send++;
+		}
+	}
+
+	// Broadcast ids and forces (the order is important)
+	MPI_Request reqs_ids[psize];
+	MPI_Request reqs_fcs[psize];
+	int recv_displ = 0;
+	for (int rank = 0; rank < psize; rank++) {
+		if (rank == prank) {
+			MPI_Ibcast(&ids_send[0], nbr_particles_send, MPI_INT, rank, MPI_COMM_WORLD, &reqs_ids[rank]);
+			MPI_Ibcast(&forces_send[0], (3 * nbr_particles_send), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_fcs[rank]);
+		}
+		else {
+			int nbr_particles_rank = nbr_particles / psize + ((nbr_particles % psize) > rank);
+			MPI_Ibcast(&ids_recv[recv_displ], nbr_particles_rank, MPI_INT, rank, MPI_COMM_WORLD, &reqs_ids[rank]);
+			MPI_Ibcast(&forces_recv[3 * recv_displ], (3 * nbr_particles_rank), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_fcs[rank]);
+			recv_displ += nbr_particles_rank;
+		}
+	}
+	MPI_Waitall(psize, reqs_ids, MPI_STATUSES_IGNORE);
+	MPI_Waitall(psize, reqs_fcs, MPI_STATUSES_IGNORE);
+
+	// Unpack the received forces
+	for (int i_recv = 0; i_recv < nbr_particles_recv; i_recv++) {
+		int i_array = ids_recv[i_recv];
+		particle_t& p = array[i_array];
+		p.f[0] = forces_recv[3 * i_recv + 0];
+		p.f[1] = forces_recv[3 * i_recv + 1];
+		p.f[2] = forces_recv[3 * i_recv + 2];
 	}
 }
 
@@ -446,7 +471,7 @@ void print_node(node* n){
 // print a particle 
 void print_particle(particle_t* p){
 	printf("[Particle %d]", p->id);
-	printf(" position ([%f:%f:%f])", p->x, p->y, p->z);
+	printf(" position ([%f:%f:%f])", p->x[0], p->x[1], p->x[2]);
 	printf(" M = %f", p->m);
 	printf("\n");
 }

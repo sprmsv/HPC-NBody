@@ -32,6 +32,8 @@ void compute_force(particle_t* p, double xpos, double ypos, double zpos, double 
 
 void compute_bh_force(node* n);
 
+void communicate(particle_t* array, int nbr_particles, int psize, int prank);
+
 void print_tree(node * n);
 void print_node(node * n);
 void print_particle(particle_t * p);
