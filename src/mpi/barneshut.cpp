@@ -321,12 +321,15 @@ void compute_force_in_node(node* root, node* n, int psize, int prank)
 			n->particle->buf_f[0] = n->particle->fx;
 			n->particle->buf_f[1] = n->particle->fy;
 			n->particle->buf_f[2] = n->particle->fz;
+			MPI_Request req_send[psize];
 			for (int rank = 0; rank < psize; rank++) {
-				if (rank == prank) continue;
-				MPI_Request req_send;
-				MPI_Isend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &req_send);
-				MPI_Wait(&req_send, MPI_STATUS_IGNORE);  // TODO: Remove this without it being slow
+				if (rank == prank) {
+					req_send[rank] = MPI_REQUEST_NULL;
+					continue;
+				}
+				MPI_Issend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &req_send[rank]);
 			}
+			MPI_Waitall(psize, req_send, MPI_STATUSES_IGNORE);
 		}
 		// Otherwise
 		else {
