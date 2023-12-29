@@ -17,10 +17,10 @@ where :
 	V		: potential (not used in this simulation)
 */
 
-particle_t* read_test_case(const char* fn, int psize)
+particle_t* read_test_case(const char* fn, int& nbr_particles, int psize)
 {
 	particle_t* mat;
-	int nbr_particles = 0;
+	int nbr_particles_file;
 	float x, y, z, vx, vy, vz, m, V;
 	int id;
 	FILE* f;
@@ -31,7 +31,10 @@ particle_t* read_test_case(const char* fn, int psize)
 		exit(1);
 	}
 	rewind(f);
-	fscanf(f, "%d", &nbr_particles);
+	fscanf(f, "%d", &nbr_particles_file);
+	if (nbr_particles == 0) {
+		nbr_particles = nbr_particles_file;
+	}
 	mat = (particle_t*) malloc(nbr_particles * sizeof(particle_t));
 
 	for (int i = 0; i < nbr_particles; i++) {

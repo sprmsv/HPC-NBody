@@ -42,5 +42,8 @@ gmon.out
 
 # Scripts
 scripts/*.sh
-!scripts/profiling.sh
-!scripts/job-profiling.sh
+!scripts/seq-profiling.sh
+!scripts/job-seq-profiling.sh
+!scripts/mpi-scaling.sh
+!scripts/job-mpi-strongscaling.sh
+!scripts/job-mpi-weakscaling.sh

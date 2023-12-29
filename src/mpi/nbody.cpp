@@ -21,7 +21,7 @@ typedef std::chrono::duration<double> second;
 
 void print_usage(char* name)
 {
-	std::cerr << "Usage: " << name << "<input-filename> <iterations>" << std::endl;
+	std::cerr << "Usage: " << name << "<input-filename> <iterations> <particles>" << std::endl;
 	exit(1);
 }
 
@@ -39,13 +39,19 @@ int main(int argc, char** argv)
 	int nbr_iterations;
 
 	// Read method
-	if (argc != 3) {
+	if (argc != 4) {
 		print_usage(argv[0]);
 	}
 
 	// Read input file
 	nbr_particles = get_nbr_particles(argv[1]);
-	array = read_test_case(argv[1], psize);
+	if (std::stoi(argv[3]) > nbr_particles) {
+		print_usage(argv[0]);
+	}
+	else {
+		nbr_particles = std::stoi(argv[3]);
+	}
+	array = read_test_case(argv[1], nbr_particles, psize);
 	nbr_iterations = std::stoi(argv[2]);
 
 	// Run the simulation

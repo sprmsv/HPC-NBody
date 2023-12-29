@@ -24,6 +24,9 @@ int get_octrant(particle_t* p, node* n);
 
 void move_all_particles(node* root, node* n, double step, int psize, int prank);
 void move_particle(node* root, node* n, particle_t* p, double step, int psize, int prank);
+
+void reassign_all_particles(node* newroot, node* n);
+void reassign_particle(node* newroot, node* n, particle_t* p);
 bool is_particle_out_of_scope(particle_t* p, node* root);
 
 void compute_force_in_node(node* root, node* n, int psize, int prank);

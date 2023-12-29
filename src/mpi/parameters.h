@@ -1,7 +1,7 @@
 #ifndef PARAMETERS_H_
 #define PARAMETERS_H_
 
-#define DEBUG
+// #define DEBUG
 
 #include <stdbool.h>
 #include <mpi.h>

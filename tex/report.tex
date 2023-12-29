@@ -60,7 +60,7 @@
   - ::particle.prank
   - ::particle.req
 - reader.h and reader.cpp
-  - ::read_test_case(, psize)
+  - ::read_test_case(nbr_particles, psize)
   - particle.prank = (id - 1) \% psize
   - particle.req = NULL
   - particle.buf_f;
@@ -70,8 +70,10 @@
     - Otherwise, post receive request from the corresponding process
   - move_all_particles(, int prank)
   - move_particle(, int prank)
-      - If particle.prank matches, nothing
-      - Otherwise, wait for the receive requests
+      - Move only if particle.prank matches
+      - no reassignation
+  - reassign_all_particles and reassign_particle: old root to new root
+  - compute_bh_force: removed
 
 \section{Results}
 ...

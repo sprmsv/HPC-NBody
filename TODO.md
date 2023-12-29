@@ -1,32 +1,18 @@
 # BARNESHUT MPI
 
-0. Profiling + sequential fraction + Amdhal’s and Gustafson’s laws
-
-*. DOUBT: compute_bh_force seems unnecessary but is not expensive anyways
-
-*. IDEA: Also parallelize the move_particle part? Theoretical ratio changes!
-    - PRO: More fraction of code will be parallelized
-    - CON: Less time for communications!! -> Worse scaling
-
 0. Review the lecture slides
 
-1. A parallel version of the Barnes-Hut algorithm using MPI.
+2. Write report + Amdhal’s and Gustafson’s laws
 
 # BRUTEFORCE CUDA
-
-0. Profiling + sequential fraction + Amdhal’s and Gustafson’s laws
 
 0. Review the lecture slides
 
 1. An accelerated version of the particle-particle method using CUDA with hand written kernels.
 
+2. Write report + Amdhal’s and Gustafson’s laws
 
 # Data
-
-- correctness of the code using the example `very-small.txt` and its perfomance using `galaxy.txt`
-- More example files can be found [here](https://wwwmpa.mpa-garching.mpg.de/gadget/). See the README.md file in project nbody for learning how to transform those examples from binary to ascii format.
-
-- The given example is a 10 bodies example. The example is in [Gadget 2](https://wwwmpa.mpa-garching.mpg.de/gadget) format translated into a text file using [this converter](https://github.com/martinsparre/Gadget2Conversion).
 
 # Report
 

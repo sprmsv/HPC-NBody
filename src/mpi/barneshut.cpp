@@ -1,7 +1,5 @@
 #include "barneshut.h"
 
-#include <cassert>
-
 
 void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, int psize, int prank)
 {
@@ -25,9 +23,9 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 	// Take time steps and move the particles
 	for (int it = 0; it < nbr_iterations; ++it) {
 		compute_force_in_node(root, root, psize, prank);
-		// compute_bh_force(root);  // TODO: Update if necessary
-		communicate(array, nbr_particles, psize, prank);
 		move_all_particles(newroot, root, step, psize, prank);
+		communicate(array, nbr_particles, psize, prank);
+		reassign_all_particles(newroot, root);
 		// Swap the root pointers
 		oldroot = root;
 		root = newroot;
@@ -241,7 +239,7 @@ int get_octrant(particle_t* p, node* n)
 	return octrant;
 }
 
-// Update position/velocity of all the particles of node n and store them to a new root
+// Update position/velocity of all the particles of node n
 void move_all_particles(node* newroot, node* n, double step, int psize, int prank)
 {
 	if (n->children != NULL) {
@@ -254,24 +252,46 @@ void move_all_particles(node* newroot, node* n, double step, int psize, int pran
 	}
 }
 
-// Compute position/velocity of the particle and store it in a new root
+// Compute position/velocity of the particle
 void move_particle(node* newroot, node* n, particle_t* p, double step, int psize, int prank)
 {
-	double ax, ay, az;
-
+	// Return if not viable
 	if ((p==NULL) || (n==NULL))
 		return;
 
-	// Update the velocity and position
-	ax = p->f[0] / p->m;
-	ay = p->f[1] / p->m;
-	az = p->f[2] / p->m;
-	p->v[0] += ax * step;
-	p->v[1] += ay * step;
-	p->v[2] += az * step;
-	p->x[0] += p->v[0] * step;
-	p->x[1] += p->v[1] * step;
-	p->x[2] += p->v[2] * step;
+	// Update velocity and position (if the particle is assigned)
+	if (p->prank == prank) {
+		double ax, ay, az;
+		ax = p->f[0] / p->m;
+		ay = p->f[1] / p->m;
+		az = p->f[2] / p->m;
+		p->v[0] += ax * step;
+		p->v[1] += ay * step;
+		p->v[2] += az * step;
+		p->x[0] += p->v[0] * step;
+		p->x[1] += p->v[1] * step;
+		p->x[2] += p->v[2] * step;
+	}
+}
+
+// Reassign all particles of the node to a new root
+void reassign_all_particles(node* newroot, node* n)
+{
+	if (n->children != NULL) {
+		for (int i = 0; i < 8; i++){
+			reassign_all_particles(newroot, &n->children[i]);
+		}
+	}
+	else {
+		reassign_particle(newroot, n, n->particle);
+	}
+}
+
+// Reassign a particle to a new root
+void reassign_particle(node* newroot, node* n, particle_t* p)
+{
+	if ((p==NULL) || (n==NULL))
+		return;
 
 	// Insert in the new root if still in scope
 	if (!is_particle_out_of_scope(p, newroot)) {
@@ -366,22 +386,7 @@ void compute_force(particle_t* p, double xpos, double ypos, double zpos, double 
 	p->f[2] += gravity * zsep;
 }
 
-// Accumulate the forces on the particles from their innermost parent node
-void compute_bh_force(node* n)
-{
-	// If the node is external, compute the force of the particle on itself 
-	if (n->children == NULL) {
-		compute_force_particle(n, n->particle);
-	}
-	// Otherwise, recall the function on all children
-	else {
-		for (int i = 0; i < 8; i++) {
-			compute_bh_force(&n->children[i]);
-		}
-	}
-}
-
-// Communicate the computed forces to the other processes
+// Communicate the computed positions and velocities to the other processes
 void communicate(particle_t* array, int nbr_particles, int psize, int prank)
 {
 	// Return if not multiprocessing
@@ -392,48 +397,60 @@ void communicate(particle_t* array, int nbr_particles, int psize, int prank)
 	int nbr_particles_recv = nbr_particles - nbr_particles_send;
 	int ids_send[nbr_particles_send];
 	int ids_recv[nbr_particles_recv];
-	double forces_send[3 * nbr_particles_send];
-	double forces_recv[3 * nbr_particles_recv];
+	double pos_send[3 * nbr_particles_send];
+	double pos_recv[3 * nbr_particles_recv];
+	double vel_send[3 * nbr_particles_send];
+	double vel_recv[3 * nbr_particles_recv];
 
-	// Pack the send buffers
+	// Construct the send buffers
 	int i_send = 0;
 	for (int i_array = 0; i_array < nbr_particles; i_array++) {
 		particle_t& p = array[i_array];
 		if (p.prank == prank) {
 			ids_send[i_send] = i_array;
-			forces_send[3 * i_send + 0] = p.f[0];
-			forces_send[3 * i_send + 1] = p.f[1];
-			forces_send[3 * i_send + 2] = p.f[2];
+			pos_send[3 * i_send + 0] = p.x[0];
+			pos_send[3 * i_send + 1] = p.x[1];
+			pos_send[3 * i_send + 2] = p.x[2];
+			vel_send[3 * i_send + 0] = p.v[0];
+			vel_send[3 * i_send + 1] = p.v[1];
+			vel_send[3 * i_send + 2] = p.v[2];
 			i_send++;
 		}
 	}
 
 	// Broadcast ids and forces (the order is important)
 	MPI_Request reqs_ids[psize];
-	MPI_Request reqs_fcs[psize];
+	MPI_Request reqs_pos[psize];
+	MPI_Request reqs_vel[psize];
 	int recv_displ = 0;
 	for (int rank = 0; rank < psize; rank++) {
 		if (rank == prank) {
 			MPI_Ibcast(&ids_send[0], nbr_particles_send, MPI_INT, rank, MPI_COMM_WORLD, &reqs_ids[rank]);
-			MPI_Ibcast(&forces_send[0], (3 * nbr_particles_send), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_fcs[rank]);
+			MPI_Ibcast(&pos_send[0], (3 * nbr_particles_send), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_pos[rank]);
+			MPI_Ibcast(&vel_send[0], (3 * nbr_particles_send), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_vel[rank]);
 		}
 		else {
 			int nbr_particles_rank = nbr_particles / psize + ((nbr_particles % psize) > rank);
 			MPI_Ibcast(&ids_recv[recv_displ], nbr_particles_rank, MPI_INT, rank, MPI_COMM_WORLD, &reqs_ids[rank]);
-			MPI_Ibcast(&forces_recv[3 * recv_displ], (3 * nbr_particles_rank), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_fcs[rank]);
+			MPI_Ibcast(&pos_recv[3 * recv_displ], (3 * nbr_particles_rank), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_pos[rank]);
+			MPI_Ibcast(&vel_recv[3 * recv_displ], (3 * nbr_particles_rank), MPI_DOUBLE, rank, MPI_COMM_WORLD, &reqs_vel[rank]);
 			recv_displ += nbr_particles_rank;
 		}
 	}
 	MPI_Waitall(psize, reqs_ids, MPI_STATUSES_IGNORE);
-	MPI_Waitall(psize, reqs_fcs, MPI_STATUSES_IGNORE);
+	MPI_Waitall(psize, reqs_pos, MPI_STATUSES_IGNORE);
+	MPI_Waitall(psize, reqs_vel, MPI_STATUSES_IGNORE);
 
-	// Unpack the received forces
+	// Unpack the received buffers
 	for (int i_recv = 0; i_recv < nbr_particles_recv; i_recv++) {
 		int i_array = ids_recv[i_recv];
 		particle_t& p = array[i_array];
-		p.f[0] = forces_recv[3 * i_recv + 0];
-		p.f[1] = forces_recv[3 * i_recv + 1];
-		p.f[2] = forces_recv[3 * i_recv + 2];
+		p.x[0] = pos_recv[3 * i_recv + 0];
+		p.x[1] = pos_recv[3 * i_recv + 1];
+		p.x[2] = pos_recv[3 * i_recv + 2];
+		p.v[0] = vel_recv[3 * i_recv + 0];
+		p.v[1] = vel_recv[3 * i_recv + 1];
+		p.v[2] = vel_recv[3 * i_recv + 2];
 	}
 }
 
