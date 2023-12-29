@@ -6,9 +6,6 @@
 
 ITERS=20
 
-srun src/mpi/nbody data/galaxy.txt $ITERS 100
-srun src/mpi/nbody data/galaxy.txt $ITERS 200
-srun src/mpi/nbody data/galaxy.txt $ITERS 500
 srun src/mpi/nbody data/galaxy.txt $ITERS 1000
 srun src/mpi/nbody data/galaxy.txt $ITERS 2000
 srun src/mpi/nbody data/galaxy.txt $ITERS 5000
