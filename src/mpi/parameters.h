@@ -50,7 +50,7 @@ struct particles
 	// Process 
 	int prank;
 	// Receive status and buffer  // TODO: Create force array instead!
-	MPI_Request req;
+	MPI_Request* req;
 	double buf_f[3];
 
 	// Potential

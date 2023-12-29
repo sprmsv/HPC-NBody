@@ -72,7 +72,6 @@ int main(int argc, char** argv)
 	else {
 		nbodybruteforce(array, nbr_particles, nbr_iterations);
 	}
-	// MPI_Allreduce(MPI_IN_PLACE, &l2, 1, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);  // TMP
 	second time = clk::now() - start;
 
 	// Free memory

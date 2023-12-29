@@ -30,8 +30,10 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations, in
 		root = newroot;
 		clean_tree(oldroot);
 		newroot = oldroot;
-		std::cout << "ITERATION " << it << std::endl;
+		std::cout<< "PROCESS " << prank << "\tITERATION " << it << std::endl;
+		MPI_Barrier(MPI_COMM_WORLD);  // TODO: Need?
 	}
+	MPI_Barrier(MPI_COMM_WORLD);  // TODO: Move outside of the loop
 
 #ifdef DEBUG
 	if (prank == 0) print_tree(root);
@@ -261,10 +263,10 @@ void move_particle(node* newroot, node* n, particle_t* p, double step, int psize
 		return;
 
 	// Update the communicated forces
-	if ((p->prank != prank) && (p->req != NULL)) {
+	if (p->prank != prank) {
 		// Wait for communication
-		MPI_Wait(&p->req, MPI_STATUS_IGNORE);  // TODO: Causes deadlock :: IT'S THE TAGS AGAIN !! OR OUT OF SCOPE !!
-		p->req = NULL;
+		MPI_Wait(p->req, MPI_STATUS_IGNORE);
+		delete p->req;
 		// Update the forces from the buffer
 		p->fx = p->buf_f[0];
 		p->fy = p->buf_f[1];
@@ -306,9 +308,6 @@ void compute_force_in_node(node* root, node* n, int psize, int prank)
 {
 	if (n==NULL) return;
 
-	MPI_Request req_send;
-	MPI_Request req_recv;
-
 	// If external node, compute all forces on the particle of the node
 	if ((n->particle != NULL) && (n->children == NULL)) {
 		// If the particle is assigned to this process
@@ -324,14 +323,16 @@ void compute_force_in_node(node* root, node* n, int psize, int prank)
 			n->particle->buf_f[2] = n->particle->fz;
 			for (int rank = 0; rank < psize; rank++) {
 				if (rank == prank) continue;
+				MPI_Request req_send;
 				MPI_Isend(&n->particle->buf_f[0], 3, MPI_DOUBLE, rank, n->particle->id, MPI_COMM_WORLD, &req_send);
+				MPI_Wait(&req_send, MPI_STATUS_IGNORE);  // TODO: Remove this without it being slow
 			}
 		}
 		// Otherwise
 		else {
 			// Receive the forces from the corresponding process (non-blocking)
-			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, &req_recv);
-			n->particle->req = req_recv;
+			n->particle->req = new MPI_Request;
+			MPI_Irecv(&n->particle->buf_f[0], 3, MPI_DOUBLE, n->particle->prank, n->particle->id, MPI_COMM_WORLD, n->particle->req);
 		}
 	}
 	// If internal node, call the function on all children
