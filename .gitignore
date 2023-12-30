@@ -38,6 +38,7 @@
 *.o
 src/*/nbody
 perf.data
+perf.data.old
 gmon.out
 
 # Scripts

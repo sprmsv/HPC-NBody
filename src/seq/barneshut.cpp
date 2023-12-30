@@ -23,7 +23,7 @@ void nbodybarneshut(particle_t* array, int nbr_particles, int nbr_iterations)
 	// Take time steps and move the particles
 	for (int it = 0; it < nbr_iterations; ++it) {
 		compute_force_in_node(root, root);
-		compute_bh_force(root);  // NOTE: Calling this function is not necessary
+		// compute_bh_force(root);  // NOTE: Calling this function is not necessary
 		move_all_particles(newroot, root, step);
 		// Swap the root pointers
 		oldroot = root;
