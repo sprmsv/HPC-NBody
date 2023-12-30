@@ -6,10 +6,11 @@
 
 METHOD=$1
 OUT=$2
+ITERS=20
 
 # Create profiling outputs
-srun src/seq/nbody data/galaxy.txt 10 $METHOD
-srun perf record -o perf.data --call-graph dwarf src/seq/nbody data/galaxy.txt 10 $METHOD
+srun src/seq/nbody data/galaxy.txt $ITERS $METHOD
+srun perf record -o perf.data --call-graph dwarf src/seq/nbody data/galaxy.txt $ITERS $METHOD
 
 # Write the report of gprof
 echo "=====================================================================" >> $OUT

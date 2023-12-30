@@ -32,7 +32,7 @@
 
 2. Profiling BH
   - time:
-    - gprof: ~70\% on compute_force_particle + ~8\% insert_particle
+    - gprof: ~79\% on compute_force_particle+compute_force_in_node + ~4\% move_all_particles
     - perf: ~70\% on compute_force_in_node + ~12\% move_all_particles
   - cache misses: only 0.13\%
     
