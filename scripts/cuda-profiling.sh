@@ -5,8 +5,6 @@
 # BUILD
 module purge
 module load gcc cuda
-make -C src/cuda clean
-make -C src/cuda all
 
 # OUTPUT FOLDER
 FOLDERNAME=$(date '+%Y%m%d%H%M%S')

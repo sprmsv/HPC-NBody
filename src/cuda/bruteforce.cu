@@ -1,7 +1,7 @@
 #include "bruteforce.h"
 
 
-// Particle-particle method using an arbitrary number of GPU threads per block 
+// Particle-particle method using an arbitrary number of GPU threads per block
 __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iterations, int threads_per_block)
 {
 	// Assign grid and block sizes
@@ -28,7 +28,7 @@ __global__ void compute_brute_force(particle_t* array, int nbr_particles)
 	if (idx >= nbr_particles) {
 		return;
 	}
-	
+
 	// Get the thread particle and copy its attributes
 	particle_t* p = &array[idx];
 	const double p_m = p->m;
@@ -61,7 +61,7 @@ __global__ void compute_brute_force(particle_t* array, int nbr_particles)
 		F_z += grav_base * z_sep;
 	}
 
-	// Compute accelerations locally 
+	// Compute accelerations locally
 	a_x = F_x / p_m;
 	a_y = F_y / p_m;
 	a_z = F_z / p_m;

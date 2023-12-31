@@ -7,7 +7,6 @@
 \usepackage{biblatex}
 \usepackage{mathtools}
 \usepackage[font=small]{caption}
-% \usepackage{subcaption}
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
@@ -26,50 +25,51 @@
 
 \section{Introduction}
 
-The provided sequential codes for solving the N-body problem have been modified to take advantage of multiple processors using the MPI library for the Barnes-Hut algorithm and using GPUs for the particle-particle method. Prior to the parallelizations, the sequential codes are profiled to get an estimation of the fraction of the parallelizable part of the code. The modified codes have been executed to measure the performance of the implementations with multiple cores and different GPU grid and block sizes. Along with this report, you will find a compressed archive file containing all the \texttt{C++} and CUDA codes, make files, slurm jobs, and shell scripts for reproducing the experiments. The codes for producing the visualizations are included in \code{visualizations.ipynb}.
+The provided sequential codes for solving the N-body problem have been modified to take advantage of multiple processors using the MPI library for the Barnes-Hut algorithm and using GPUs for the particle-particle method. Prior to the parallelizations, the sequential codes are profiled to get an estimation of the fraction of the parallelizable part of the code. The modified codes have been executed to measure the performance of the implementations with multiple cores and different GPU grid and block sizes. Along with this report, you will find a compressed archive file containing all the \code{C++} and CUDA codes, make files, slurm jobs, and shell scripts for reproducing the experiments. The codes for producing the visualizations are included in \code{visualizations.ipynb}.
 
-All the experiemnts are done using the \texttt{data/galaxy.txt} dataset and with 20 iterations. In the rest of the document, $N$ represents the number of particles considered from this dataset.
+All the experiemnts are done using the \code{data/galaxy.txt} dataset and with 20 iterations. In the rest of the document, $N$ represents the number of particles considered from this dataset.
 
 \section{Profiling of the sequential code}
 
-The initial sequential codes are cleaned, commented, and improved, and the input arguments of the main executable are extended so that the method can be picked during runtime. The codes are adapted to \texttt{C++} and some standard library classes are used. The input/output of the code is also modified to facilitate the post-processing of the results. However, the logic of the initial codes are not changed except for the removal of the \texttt{compute\_bh\_force} function in the Barnes-Hut algorithm. This function computes the force of the particles on themselves, and removing it would not change the results.
+The initial sequential codes are cleaned, commented, and improved, and the input arguments of the main executable are extended so that the method can be picked during runtime. The codes are adapted to \code{C++} and some standard library classes are used. The input/output of the code is also modified to facilitate the post-processing of the results. However, the logic of the initial codes are not changed except for the removal of the \code{compute\_bh\_force} function in the Barnes-Hut algorithm. This function computes the force of the particles on themselves, and removing it would not change the results.
 
-The cleaned sequential codes are used for profiling and as the base for the other parts of the project. They are located in \texttt{./src/seq}. Both methods are profiled with \texttt{gprof} and \texttt{perf} and the results are available in \texttt{./results/20231230161253} and \texttt{./results/20231230161348}. The scripts in \texttt{./scripts/seq-profiling.sh} and \texttt{./scripts/job-seq-profiling.sh} are used for the profilings. For both methods, the results of \texttt{perf-stat} indicate that only 0.13\% of the cache loads have been missed.
+The cleaned sequential codes are used for profiling and as the base for the other parts of the project. They are located in \code{./src/seq}. Both methods are profiled with \code{gprof} and \code{perf} and the results are available in \code{./results/20231230161253} and \code{./results/20231230161348}. The scripts in \code{./scripts/seq-profiling.sh} and \code{./scripts/job-seq-profiling.sh} are used for the profilings. For both methods, the results of \code{perf-stat} indicate that only 0.13\% of the cache loads have been missed.
 
-The results of \texttt{gprof} for the Barnes-Hut method indicate that around 78\% of thetotal execution time is consumed by the \texttt{compute\_force\_particle} and the\texttt{compute\_force\_in\_node} functions, and around 5\% by \texttt{move\_all\_particles}.The results of \texttt{perf-report} indicate that around 73\% of the total execution timeis spent in \texttt{compute\_force\_in\_node} and around 14\% in \texttt{move\_all\_particles}.The parallelizable fraction of the code is therefore approximated as 85\%. It is notable thatthis number is an over-estimation since insertion of the particles in \texttt{move\_all\_particles}will not be targeted for parallelization in the taken approach.
+The results of \code{gprof} for the Barnes-Hut method indicate that around 78\% of thetotal execution time is consumed by the \code{compute\_force\_particle} and the\code{compute\_force\_in\_node} functions, and around 5\% by \code{move\_all\_particles}.The results of \code{perf-report} indicate that around 73\% of the total execution timeis spent in \code{compute\_force\_in\_node} and around 14\% in \code{move\_all\_particles}.The parallelizable fraction of the code is therefore approximated as 85\%. It is notable thatthis number is an over-estimation since insertion of the particles in \code{move\_all\_particles} will not be targeted for parallelization in the taken approach.
 
-Not much can be inferred from the results of \texttt{gprof} and \texttt{perf-report} for the brute force method since it is comprised of only 3 functions.
+Not much can be inferred from the results of \code{gprof} and \code{perf-report} for the brute force method since it is comprised of only 3 functions.
 
 \section{Parallelization of the Barnes-Hut algorithm with MPI}
 
-The parallelized version of the Barnes-Hut algorithm is available in \texttt{./src/mpi}. The computation of forces and changes in velocity and positions are targeted for this parallelization. Each particle is assined to a process based on its identifier. The rank of the processor is determined as $\text{rank}_p = (\text{id}_p - 1) \% \text{n}$, where $n$ is the total number of the processors and $\%$ represents the modulo operator. Hence, a \texttt{prank} member is added to the \texttt{particle} struct and is assigned in \texttt{read\_test\_case}. With this, in \texttt{compute\_force\_in\_node}, the forces are computed only if the particle is assigned to the processor. Similarly, the computation of the new velocities and positions in \texttt{move\_particle} is also only done if the particle is assigned to the processor. In order to separate this step with the construction of the new Barnes-Hut tree based on the new positions, two functions are introduced: \texttt{reassign\_all\_particles} and \texttt{reassign\_particle}, which are invoked only after the communication of the computations with the other processors is done using the \texttt{communicate} function.
+The parallelized version of the Barnes-Hut algorithm is available in \code{./src/mpi}. The computation of forces and changes in velocity and positions are targeted for this parallelization. Each particle is assined to a process based on its identifier. The rank of the processor is determined as $\text{rank}_p = (\text{id}_p - 1) \% \text{n}$, where $n$ is the total number of the processors and $\%$ represents the modulo operator. Hence, a \code{prank} member is added to the \code{particle} struct and is assigned in \code{read\_test\_case}. With this, in \code{compute\_force\_in\_node}, the forces are computed only if the particle is assigned to the processor. Similarly, the computation of the new velocities and positions in \code{move\_particle} is also only done if the particle is assigned to the processor. In order to separate this step with the construction of the new Barnes-Hut tree based on the new positions, two functions are introduced: \code{reassign\_all\_particles} and \code{reassign\_particle}, which are invoked only after the communication of the computations with the other processors is done using the \code{communicate} function.
 
-In \texttt{communicate}, the new velocities and positions of the assigned particles along with their identifiers are packed in three long vectors, and are broadcasted to the other processes using \texttt{MPI\_Ibcast}. The new velocities and positions of the other particles are received from the other processes and are unpacked to update the particles.
+In \code{communicate}, the new velocities and positions of the assigned particles along with their identifiers are packed in three long vectors, and are broadcasted to the other processes using \code{MPI\_Ibcast}. The new velocities and positions of the other particles are received from the other processes and are unpacked to update the particles.
 
-In a failed attempt to benefit from computation-communication overlapping, another approach has also been tried for communications. In this approach, the computed forces of the particles are sent immediately after they are computed, one by one, and are expected by the other processors only before computation of the new positions. Although the communication of the forces are overlapped with the computation of the forces of the other particles, this approach performs very poorly because of the large number of communication requests. In each iteration, $O(N)$ communications are requested, compared to only $O(n)$ communications in the other approach. Another possible implementation is using \texttt{MPI\_Allgather} or one of its alternatives to transfer the computations to one array for all particles in all processes.
+In a failed attempt to benefit from computation-communication overlapping, another approach has also been tried for communications. In this approach, the computed forces of the particles are sent immediately after they are computed, one by one, and are expected by the other processors only before computation of the new positions. Although the communication of the forces are overlapped with the computation of the forces of the other particles, this approach performs very poorly because of the large number of communication requests. In each iteration, $O(N)$ communications are requested, compared to only $O(n)$ communications in the other approach. Another possible implementation is using \code{MPI\_Allgather} or one of its alternatives to transfer the computations to one array for all particles in all processes.
+
+\begin{figure*}[ht]
+  \centering
+  \includegraphics[width=.75\textwidth]{img/strongscaling.png}
+  \caption{Empirical strong scaling speedup with different problem sizes aggregated over 10 experiments.}
+  \label{fig:strongscaling}
+\end{figure*}
 
 \subsection{Computational complexity}
 
 Broadcasting in Open MPI is implemented using binominal trees, which has a complexity of order $O(M \log n)$ for a vector of length $M$. In the presented implementation, two vectors of length $3 \frac{N}{n}$ and one vector of length $\frac{N}{n}$ are broadcasted by each processor, which gives an overall communication complexity of $O(n \times \frac{N}{n} \log n) = O(N \log n)$ with fixed number of iterations. The packing and unpacking of the buffers are dominated by the exchange of the messages.
 
-Since forces from the whole system are computed for only $\frac{N}{n}$ particles by each process,the algorithmic complexity of the computations scales down from $O(N \log N)$ in the sequential code to $O(\frac{N}{n} \log N)$. However, the complexity of \texttt{create\_bh\_tree} remains the same sicne this part of the code is not parallelized.
+Since forces from the whole system are computed for only $\frac{N}{n}$ particles by each process,the algorithmic complexity of the computations scales down from $O(N \log N)$ in the sequential code to $O(\frac{N}{n} \log N)$. However, the complexity of \code{create\_bh\_tree} remains the same sicne this part of the code is not parallelized.
 
 \subsection{Results}
 
-A strong scaling and a weak scaling are performed to evaluate the performance of the code with multiple processors. For the strong scaling, we fix the size of the problem and launch the code with different number of processors $n$. For the weak scaling, we tend to keep the computational complexity of the problem fixed, and hence increase $N$ and $n$ at the same time. The pairs ($n$, $N$) for achieving this are: (1, 964), (2, 1770), (4, 3274), (8, 6081), (16, 11350), (32, 21268), and (64, 40000), which all result in the same computational complexity.
+A strong scaling and a weak scaling are performed to evaluate the performance of the code with multiple processors (check \code{./scripts/mpi-scaling.sh}). For the strong scaling, we fix the size of the problem and launch the code with different number of processors $n$. For the weak scaling, we tend to keep the computational complexity of the problem fixed, and hence increase $N$ and $n$ at the same time. The pairs ($n$, $N$) for achieving this are: (1, 964), (2, 1770), (4, 3274), (8, 6081), (16, 11350), (32, 21268), and (64, 40000), which all result in the same computational complexity.
 
 This process is repeated 10 times to mitigate the randomness that can happen in the processors. In the strong scaling, the speedup with $n$ processors in experiment $i$ is calculated by $S^{(i)}_{strong}(n) = t^{(i)}_1 / t^{(i)}_n$, where $t^{(i)}_n$ is the measured time in experiment $i$ with $n$ processors. Similarly, the efficiency in the weak scaling is calculated by $E^{(i)}_{weak}(n) = S^{(i)}_{weak}(n) / n = t^{(i)}_1 / t^{(i)}_n$. Figure \ref{fig:strongscaling} shows the medians of speedups across all the 10 experiments along with their 90\% confidence intervals for different problem sizes. The ideal speedup and the upper bound from Amdahl's law with $p=85\%$ are also depicted. In Figure \ref{fig:weakscaling}, the medians of the measured efficiencies across all experiment are plotted along with their 90\% confidence intervals. The ideal efficiency and the upper bound from Gustafon's law with constant parallelization ratio $p(N)=85\%$ is also depcited. In both figures, the discrepency with the theoretical upper bounds is plotted in the right part.
 
-\begin{figure*}[ht]
-  \centering
-  \includegraphics[width=.9\textwidth]{img/strongscaling.png}
-  \caption{Empirical strong scaling speedup with different problem sizes aggregated over 10 experiments.}
-  \label{fig:strongscaling}
-\end{figure*}
 
 \begin{figure*}[ht]
   \centering
-  \includegraphics[width=.9\textwidth]{img/weakscaling.png}
+  \includegraphics[width=.75\textwidth]{img/weakscaling.png}
   \caption{Empirical weak scaling efficiency aggregated over 10 experiments.}
   \label{fig:weakscaling}
 \end{figure*}
@@ -95,9 +95,48 @@ which means that with more processors the cost of communications increases while
 \end{equation*}
 The difference with Gustafon's law can thus be expressed as $\frac{O(n)}{O(n)}$. The right side of Figure \ref{fig:weakscaling} shows a possible function with this algorithmic behaviour along with the empirical results. As more processors are used, $C(n)$ becomes more and more dominating and the effect of $W(n)$ becomes insignificant.
 
-\section{Parallelization of the Particle-Particle method with CUDA}
-% TODO: Write
+\section{Parallelization of the particle-particle method with CUDA}
 
+The accelerated version of the particle-particle method is available in \code{src/cuda}. In these code, the entry function in \code{nbody.cpp} is modified to verify the device properties, allocate the array of the particles in the unified memory, and to deallocate it at the end. The \code{nbodybruteforce} function is run on host and manages launching the kernels on device threads, their synchronizations, as well as handling the GPU errors. The grid size is also calculated here depending on the user-defined block size (number of threads per block). Two kernels are defined: \code{compute\_brute\_force} for calculating the forces and velocities on a single particle, and \code{update\_positions} for updating the new position of a single particle. These kernels are launched on device threads with each thread being responsible for one particle. If the total count of particles is not a multiply of the number of threads per block, the last block will be composed of some extra idle threads. \code{cudaDeviceSynchronize} is used to join the threads before calculating modifying the particle positions and after each iteration. It is also notable that by creating a local copy of the needed attributes of the assigned particle in \code{compute\_brute\_force}, accessing the unified memory for those attributes is only done once instead of $N$ times in the loop.
+
+\subsection{CUDA Technical Specifications}
+
+The compute capability of CUDA with the available GPU is \code{7.0}. We read the corresponding technical specifications from NVIDIA documentations. The relative specifications are listed in Table \ref{tab:specs}. The maximum number of grids does not pose any limitation since we are always using only one grid. The maximum block dimension and the maximum number of threads per block (1024) impose a limitation on the block size. Theoretically, we can increase the block size to $N$ (one block in the whole grid) but with this limitation, the maximum is 1024 threads in the block.
+
+\begin{table}[h]
+    \centering
+    \caption{Technical specifications of {NVIDIA Tesla V100-PCIE-32GB} with CUDA Compute Compatibility \code{7.0}.}
+    \begin{tabular}{|c|c||c|c|}
+        \hline
+        Specification & Value & Specification & Value \\
+        \hline
+        SM count & 80 & Warp size & 32\\
+        Max. grids & 128 & Max. blocks per SM & 32\\
+        Max. block dimension & 1024 & Max. warps per SM & 64\\
+        Max. threads per block & 1024 & Max. threads per SM & 2048\\
+        \hline
+    \end{tabular}
+    \label{tab:specs}
+\end{table}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=.35\textwidth]{img/threadsperblock.png}
+  \caption{Total execution time of the accelerated particle-particle method with 20 iterations.}
+  \label{fig:threadsperblock}
+\end{figure}
+
+\subsection{Results}
+
+The accelerated version of the particle-particle method is launched with different numbers of threads per block and the execution time is measured to evaluate its performance. We measure the execution time with 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, and 1024 threads per block. Each experiment is repeated 10 times and the median values of the experiments are reported to avoid the effect of randomness in the hardware. The accelerated code is also profilied using \code{nvprof} and the results are available in {./results/20231231182641/}. The \code{./scripts/cuda-tpb.sh} script is used for measuring the performance and the \code{./scripts/cuda-profiling.sh} script is used for profiling.
+
+Figure \ref{fig:threadsperblock} shows that the performance is extremely poor with 1 thread per block and gradually gets improved when this number is increased. With 32 threads per block, the minimum time is reached and increasing the number of threads per block does not improve the performance anymore. With 1024 threads per block, there is a slight increase in the execution time. We will discuss the main reasons for this behavior in the next section.
+
+\subsection{Discussion}
+
+The main reason for the performance trend in Figure \ref{fig:threadsperblock} lies on the fact that stream multiprocessors (SM's) process threads in warps.
+
+With only 1 thread per block, the thread of each block constitutes one warp although it is way smaller than the warp size (32). This means that each thread will be executed with 31 idle extra threads, i.e., very low occupancy. As more threads are used in a single block, the implementation becomes more efficient since more active threads will constitute the warps. With 32 threads per block or more, all threads in the warps are active and further increase in the number of threads per block does not improve the performance. Another important factor is the use of all the available SM's. Since each block is processed by a single SM, if the number of blocks are less than 80, there are not enough blocks to use all the available SM's. This explains the slight performance drop with 1024 threads per block in Figure \ref{fig:threadsperblock}. With this number of threads per block, the threads are grouped in 40 blocks in total, which means that only half of the SM's will be active. With 512 threads per block, we have 79 blocks in total, leaving only one SM inactive. With all the other structures, the total number of blocks exceeds 80 and thus all the SM's are used.
 
 \section{Reproducibility}
 
@@ -105,7 +144,8 @@ All figures and numbers are generated from the experiment results that are inclu
 \begin{itemize}
     \item \code{\$ scripts/seq-profiling.sh}
     \item \code{\$ scripts/mpi-scaling.sh}
-    \item \code{\$ scripts/cuda-xxxx.sh}
+    \item \code{\$ scripts/cuda-tpb.sh}
+    \item \code{\$ scripts/cuda-profiling.sh}
     \item Wait until the jobs are processed.
     \item \code{\$ mv -r ./output/* ./results/}
     \item Run \code{visualizations.ipynb}.
@@ -114,5 +154,7 @@ All figures and numbers are generated from the experiment results that are inclu
 \section{Conclusion}
 
 The performance of the Barnes-Hut algorithm for the N-body problem is evaluated with multiple processors by splitting the particles among the processors. Strong scaling shows that with the estimated parallelizable fraction, using many processors cannot theoretically be very beneficial, and the parallelization approach scales very poorly for fixed-size problems. However, for larger problems, it is possible to get speedups closer to Amdahl's law. Weak scaling was even more disappointing than the strong scaling, with an efficiency of ~0.5 with 2 processors and ~0.2 with 4 processors. This shows that increasing the problem size according to the available processors is not beneficial either. More sophisticated implementations of the algorithm or more sophisticated parallelization approaches are necessary for getting acceptable results. The lowest hanging fruit is parallelizing the tree construction as well as computation of forces and positions. A more complicated option is splitting the physical space among the processors with local information. With a smart implementation, each process will only need the information of particles in the nearby nodes, hence, less communications are needed. However, keeping the balance between the processors can be challenging with this appraoch.
+
+On the other hand, the accelerated version of the particle-particle method with CUDA shows great performances provided that the grid structures are suitable for the problem size. The number of threads per block needs to be large enough to occupy a whole warp, but not too large that there are not enough blocks to occupy all the stream multiprocessors. For a problem with 40000 particles, any number between 32 and 512 is a good candidate. However, for smaller problems, there might be no number that satisfies both these conditions. It is also notable that the minimum execution time of the accelerated particle-particle method (0.53s) is 40\% smaller than the minimum execution time of the parallel Barnes-Hut algorithm (0.89s with 8 processors) for the same problem.
 
 \end{document}
