@@ -6,35 +6,33 @@ __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iter
 {
 	// Assign grid and block sizes
 	dim3 bsz(threads_per_block);
-	dim3 gsz(nbr_particles / threads_per_block);
+	dim3 gsz(nbr_particles / threads_per_block + 1);
 	const int threads_per_block_rem = nbr_particles % threads_per_block;
 
 	// Launch the kernels in each iteration and synchronize
 	double step = 1.;
 	for (int it = 0; it < nbr_iterations; it++){
 		compute_brute_force<<<gsz, bsz>>>(array, nbr_particles, step);
-		if (threads_per_block_rem > 0) {
-			int offset = gsz.x * threads_per_block;
-			compute_brute_force<<<1, threads_per_block_rem>>>(array, nbr_particles, step, offset);
-		}
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
-		update_positions<<<gsz, bsz>>>(array, step);
-		if (threads_per_block_rem > 0) {
-			int offset = gsz.x * threads_per_block;
-			update_positions<<<1, threads_per_block_rem>>>(array, step, offset);
-		}
+		update_positions<<<gsz, bsz>>>(array, nbr_particles, step);
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
 	}
 }
 
 // Kernel for computing the forces, accelerations, and velocities of one particle
-__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step, int offset)
+__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step)
 {
+	// Return if the thread is extra (can only happen in the last block)
+	int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx >= nbr_particles) {
+		return;
+	}
+	
 	// TODO: Copy or reference or pointer?
 	// Get the thread particle
-	particle_t* p = &array[offset + blockIdx.x * blockDim.x + threadIdx.x];
+	particle_t* p = &array[idx];
 
 	// Declare variables
 	double x_sep, y_sep, z_sep, dist_sq, grav_base;
@@ -72,11 +70,17 @@ __global__ void compute_brute_force(particle_t* array, int nbr_particles, double
 }
 
 // Kernel for updating the position of one particle
-__global__ void update_positions(particle_t* array, double step, int offset)
+__global__ void update_positions(particle_t* array, int nbr_particles, double step)
 {
+	// Return if the thread is extra (can only happen in the last block)
+	int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx >= nbr_particles) {
+		return;
+	}
+
 	// TODO: Copy or reference or pointer?
 	// Get the thread particle
-	particle_t* p = &array[offset + blockIdx.x * blockDim.x + threadIdx.x];
+	particle_t* p = &array[idx];
 
 	// Increment the position
 	p->x[0] += p->v[0] * step;
