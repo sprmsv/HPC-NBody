@@ -3,14 +3,22 @@
 
 #include "parameters.h"
 
+#include <cuda_runtime.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+
+#include <iostream>
+#include <string>
+#include <exception>
 #include <algorithm>
 
 
-void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iterations);
-void compute_brute_force(particle_t* p1, particle_t* array, int nbr_particles, double step);
-void update_positions(particle_t* array, int nbr_particles, double step);
+__host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iterations, int threads_per_block);
+__host__ void throw_last_gpu_error();
+
+__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step);
+__global__ void update_positions(particle_t* array, double step);
 
 
 #endif /*NBODYBRUTEFORCE_H_*/

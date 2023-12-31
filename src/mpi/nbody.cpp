@@ -38,7 +38,7 @@ int main(int argc, char** argv)
 	int nbr_particles;
 	int nbr_iterations;
 
-	// Read method
+	// Check arguments
 	if (argc != 4) {
 		print_usage(argv[0]);
 	}

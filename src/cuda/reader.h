@@ -11,7 +11,7 @@
 #include <float.h>
 
 
-particle_t* read_test_case(const char* fn);
+void read_test_case(const char* fn, particle_t* mat);
 int get_nbr_particles(const char* fn);
 particle_t getMinMax(particle_t* array, int nbr_particles);
 

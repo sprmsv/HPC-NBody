@@ -1,27 +1,17 @@
-CXX = icpc
-CXXFLAGS += -Wall -Wextra -pedantic -std=c++11 -O3
-NVCC = nvcc
-NVCCFLAGS += -O3
+CXX=nvcc
+CXXFLAGS+=-Xcompiler="-Wall -Wextra -Werror" -std c++11 -O3
 LD = ${CXX}
-LDFLAGS = ${CXXFLAGS}
-LDFLAGS += -lm
-# LDFLAGS += $(NVCCFLAGS)
+LDFLAGS+=-lm $(CXXFLAGS)
 
-OBJS = nbody.o reader.o bruteforce.o barneshut.o
+OBJS = nbody.o reader.o bruteforce.o
 
-all: build remove_objs
+all: clean build remove_objs
 
 build: $(OBJS)
 	$(LD) $(OBJS) $(LDFLAGS) -o nbody
 
-profiling: $(OBJS)
-	$(LD) $(OBJS) $(LDFLAGS) -pg -g -o nbody
-
-# nbody-code: nbody.o nbody_bruteforce.o reader.o
-# 	$(NVCC) $^ $(LDFLAGS) -o $@
-
-# %.o:%.cu
-# 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
+bruteforce.o: bruteforce.cu
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 remove_objs:
 	rm *.o

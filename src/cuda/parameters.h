@@ -24,29 +24,17 @@ typedef struct nodes node;
 struct particles
 {
 	// Position
-	double x;
-	double y;
-	double z;
-
+	double x[3];
 	// Speed
-	double vx;
-	double vy;
-	double vz;
-
+	double v[3];
 	// Force
-	double fx;
-	double fy;
-	double fz;
-
+	double f[3];
 	// Mass
 	double m;
-
 	// Identifier
 	int id;
-
 	// Potential
 	double V;
-
 	// Parent node
 	node* parent;
 };
