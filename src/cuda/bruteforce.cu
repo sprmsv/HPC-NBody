@@ -10,19 +10,18 @@ __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iter
 	const int threads_per_block_rem = nbr_particles % threads_per_block;
 
 	// Launch the kernels in each iteration and synchronize
-	double step = 1.;
 	for (int it = 0; it < nbr_iterations; it++){
-		compute_brute_force<<<gsz, bsz>>>(array, nbr_particles, step);
+		compute_brute_force<<<gsz, bsz>>>(array, nbr_particles);
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
-		update_positions<<<gsz, bsz>>>(array, nbr_particles, step);
+		update_positions<<<gsz, bsz>>>(array, nbr_particles);
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
 	}
 }
 
 // Kernel for computing the forces, accelerations, and velocities of one particle
-__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step)
+__global__ void compute_brute_force(particle_t* array, int nbr_particles)
 {
 	// Return if the thread is extra (can only happen in the last block)
 	int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
@@ -64,13 +63,13 @@ __global__ void compute_brute_force(particle_t* array, int nbr_particles, double
 	a_z = F_z / p->m;
 
 	// Increment particle velocities
-	p->v[0] += a_x * step;
-	p->v[1] += a_y * step;
-	p->v[2] += a_z * step;
+	p->v[0] += a_x * TIMESTEP;
+	p->v[1] += a_y * TIMESTEP;
+	p->v[2] += a_z * TIMESTEP;
 }
 
 // Kernel for updating the position of one particle
-__global__ void update_positions(particle_t* array, int nbr_particles, double step)
+__global__ void update_positions(particle_t* array, int nbr_particles)
 {
 	// Return if the thread is extra (can only happen in the last block)
 	int idx = offset + blockIdx.x * blockDim.x + threadIdx.x;
@@ -83,9 +82,9 @@ __global__ void update_positions(particle_t* array, int nbr_particles, double st
 	particle_t* p = &array[idx];
 
 	// Increment the position
-	p->x[0] += p->v[0] * step;
-	p->x[1] += p->v[1] * step;
-	p->x[2] += p->v[2] * step;
+	p->x[0] += p->v[0] * TIMESTEP;
+	p->x[1] += p->v[1] * TIMESTEP;
+	p->x[2] += p->v[2] * TIMESTEP;
 }
 
 // Get the last CUDA error and throw it as a runtime error

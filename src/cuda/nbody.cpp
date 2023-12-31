@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 	int nbr_particles;
 	int nbr_iterations;
 	int threads_per_block;
-	nbr_particles = get_nbr_particles(argv[1]);  // TODO: 32768 == 2^15
+	nbr_particles = get_nbr_particles(argv[1]);
 	nbr_iterations = std::stoi(argv[2]);
 	threads_per_block = std::stoi(argv[3]);
 	if (threads_per_block > nbr_particles) {
