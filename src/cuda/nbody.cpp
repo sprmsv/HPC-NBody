@@ -5,17 +5,17 @@
 #include "reader.h"
 #include "bruteforce.h"
 
-#include <chrono>
-#include <iostream>
-#include <iomanip>
-
-#include <cstring>
+#include <cuda_runtime.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuda_runtime.h>
+
+#include <chrono>
+#include <iostream>
+#include <iomanip>
+#include <cstring>
 
 
 typedef std::chrono::high_resolution_clock clk;
