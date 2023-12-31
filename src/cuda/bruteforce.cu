@@ -14,13 +14,15 @@ __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iter
 	for (int it = 0; it < nbr_iterations; it++){
 		compute_brute_force<<<gsz, bsz>>>(array, nbr_particles, step);
 		if (threads_per_block_rem > 0) {
-			compute_brute_force<<<1, threads_per_block_rem>>>(array, nbr_particles, step);
+			int offset = gsz.x * threads_per_block;
+			compute_brute_force<<<1, threads_per_block_rem>>>(array, nbr_particles, step, offset);
 		}
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
 		update_positions<<<gsz, bsz>>>(array, step);
 		if (threads_per_block_rem > 0) {
-			update_positions<<<1, threads_per_block_rem>>>(array, step);
+			int offset = gsz.x * threads_per_block;
+			update_positions<<<1, threads_per_block_rem>>>(array, step, offset);
 		}
 		cudaDeviceSynchronize();
 		throw_last_gpu_error();
@@ -28,11 +30,11 @@ __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iter
 }
 
 // Kernel for computing the forces, accelerations, and velocities of one particle
-__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step)
+__global__ void compute_brute_force(particle_t* array, int nbr_particles, double step, int offset)
 {
 	// TODO: Copy or reference or pointer?
 	// Get the thread particle
-	particle_t* p = &array[blockIdx.x * blockDim.x + threadIdx.x];
+	particle_t* p = &array[offset + blockIdx.x * blockDim.x + threadIdx.x];
 
 	// Declare variables
 	double x_sep, y_sep, z_sep, dist_sq, grav_base;
@@ -70,11 +72,11 @@ __global__ void compute_brute_force(particle_t* array, int nbr_particles, double
 }
 
 // Kernel for updating the position of one particle
-__global__ void update_positions(particle_t* array, double step)
+__global__ void update_positions(particle_t* array, double step, int offset)
 {
 	// TODO: Copy or reference or pointer?
 	// Get the thread particle
-	particle_t* p = &array[blockIdx.x * blockDim.x + threadIdx.x];
+	particle_t* p = &array[offset + blockIdx.x * blockDim.x + threadIdx.x];
 
 	// Increment the position
 	p->x[0] += p->v[0] * step;
