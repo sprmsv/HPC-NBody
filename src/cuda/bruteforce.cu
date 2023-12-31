@@ -6,7 +6,8 @@ __host__ void nbodybruteforce(particle_t* array, int nbr_particles, int nbr_iter
 {
 	// Assign grid and block sizes
 	dim3 bsz(threads_per_block);
-	dim3 gsz(nbr_particles / threads_per_block + 1);
+	int extra_block = (nbr_particles % threads_per_block > 0) ? 1 : 0;
+	dim3 gsz(nbr_particles / threads_per_block + extra_block);
 
 	// Launch the kernels in each iteration and synchronize
 	for (int it = 0; it < nbr_iterations; it++){
