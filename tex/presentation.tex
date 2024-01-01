@@ -10,6 +10,8 @@
 \usepackage{listings}
 \usepackage{xcolor}
 
+\newcommand{\code}[1]{{\small \texttt{#1}}}
+
 % General document information
 \author{
     \textbf{Student: Sepehr Mousavi} \\
@@ -31,10 +33,15 @@
         \includegraphics[width=.8\textwidth]{img/strongscaling.png}
     \end{figure}
 
-  \begin{itemize}
-    \item ...
-    \item ...
-  \end{itemize}
+    \begin{itemize}
+        \item Parallelizable part of the code $\sim 85\%$ - {\small computing forces and movements}
+        \item Even Amdahl's upper bound is limited - {\small maximum speed-up of 6 with 64 processors}
+        \item Computational complexity $O(\frac{N}{n} \log N)$ - {\small because each process handles $\frac{N}{n}$ particles}
+        \item Communication complexity $O(n \times \frac{N}{n} \log n)$ - {\small \code{MPI\_Ibcast} from each processor}
+        \item Communication cost dominates the computational benefits with more processors
+        \item The domination of communication cost happens later for larger problems
+        \item The discrepency behaves as $O(\log n)$ - {\small same as communication with fixed $N$}
+    \end{itemize}
 
 \end{frame}
 
@@ -46,8 +53,14 @@
     \end{figure}
 
     \begin{itemize}
-    \item ...
-    \item ...
+        \item $p(N) \simeq 0.85$ is viable - {\small Construction of the tree (serial) has the same complexity}
+        \item Huge discrepency from Gustafon's law - {\small the theoory does not count for communication}
+        \item Constant computational work
+            \\ \hspace{.25\textwidth} $W(n) = O(\frac{N}{n} \log N) = O(1) = W$
+        \item We can replace $O(N \log N)$ with $O(n)$
+        \item Communication cost
+            \\ \hspace{.05\textwidth} $C(n) = O(N \log n) = O(N [\log N + \log(\log N)]) = O(N \log N) = O(n)$
+        \item Efficiency $E(n) = \frac{T(1)}{T(n)} = \frac{W}{W + C(n)} = 1 - \frac{C(n)}{W + C(n)}$
     \end{itemize}
 
 \end{frame}
@@ -55,8 +68,26 @@
 \begin{frame}{Block sizes of the GPU-accelerated particle-particle method}
 
     \begin{columns}
-        \column{.5\textwidth} {
+        \column{.6\textwidth} {
             \centering
+            \begin{itemize}
+                \item Each thread handles one particle
+                    \\ - {\small Last block with idle threads}
+                \item Index is {\small \texttt{blockIdx.x * blockDim.x + threadIdx.x}}
+                \item \texttt{cudaDeviceSynchronize}
+                    \\ - {\small Before updateing the positions}
+                    \\ - {\small After each iteration}
+                \item Poor performance with 1 thread per block
+                    \\ - {\small Only 1 active thread in each warp}
+                \item Stagnates between 32 to 512 threads per block
+                    \\ - {\small Warps are full and all SM's are used}
+                \item Slight increase with 1024 threads per block
+                    \\ - {\small Only 40 SM's are used}
+                \item Not suitable for small problems
+                    \\ - {\small Keeping the balance might be problematic}
+                \item Better than the parallelized Barnes-Hut
+                    \\ - {\small Only 0.53s compared to 0.89s with 8 processors}
+            \end{itemize}
         }
         \column{.4\textwidth} {
             \centering
@@ -69,35 +100,5 @@
 
 
 \end{frame}
-
-
-
-% \begin{frame}{Remarks and Prospect}
-
-%     \textbf{Fixed dimensions:}
-%     \begin{itemize}
-%         \item The codes can be used as a static library.
-%         \item Since the input and output dimensions are templated, the compiled executable is always limited to a set of pre-defined dimensions.
-%         \item This behaviour can be changed by implementing dynamic memory allocation for \texttt{Vector}, \texttt{Function}, and \texttt{Workflow}.
-%     \end{itemize}
-
-%     \vfill
-
-%     \textbf{Data types and memory allocation:}
-%     \begin{itemize}
-%         \item The data type of \texttt{Vector} (currently \texttt{double}) should be templated.
-%         \item Since the size of the vectors (e.g., \texttt{n\_samples}) are always fixed, the code can benefit from static arrays (\texttt{std::array}) instead of vectors (\texttt{std::vector}).
-%     \end{itemize}
-
-%     \vfill
-
-%     \textbf{Next steps:}
-%     \begin{itemize}
-%         \item The configurations of the source distribution can be loaded from an input file, similar to \texttt{Function}.
-%         \item Histograms of the generated samples and convergence plots for the Central Limit Theorem can be added to the outputs.
-%     \end{itemize}
-
-
-% \end{frame}
 
 \end{document}
